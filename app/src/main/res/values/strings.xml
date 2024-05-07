@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">Real-time Obstacles Detection System</string>
+    <string name="run_inside">Test in app</string>
+    <string name="floating_run">Test in split windows</string>
+    <string name="background_run">Run in background</string>
+    <string name="about">About us</string>
+    <string name="setting">Setting</string>
+
+
 </resources>
