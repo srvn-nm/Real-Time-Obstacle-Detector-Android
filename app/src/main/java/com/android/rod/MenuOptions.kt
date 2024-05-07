@@ -44,7 +44,9 @@ fun HomePageCategoriesCardView(title: String, icon: ImageVector, modifier: Modif
             Icon(
                 imageVector = icon,
                 contentDescription = "" ,
-                modifier = Modifier.clip(RoundedCornerShape(20.dp)),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .size(100.dp),
                 tint = primary
 
             )

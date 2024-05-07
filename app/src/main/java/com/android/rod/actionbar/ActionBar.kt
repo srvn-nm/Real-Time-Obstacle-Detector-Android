@@ -27,8 +27,7 @@ fun AppActionBar(
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
-    val configuration = LocalConfiguration.current
-    val halfWidth = configuration.screenWidthDp / 2
+
     TopAppBar(
         elevation = 1.dp,
         title = {
@@ -38,7 +37,7 @@ fun AppActionBar(
                 style = MaterialTheme.typography.titleMedium,
                 fontSize = with(density) { 20.dp.toSp() },
                 modifier = Modifier
-                    .padding(start = halfWidth.dp)
+                    .padding(start = 20.dp)
             )
         },
         backgroundColor = primary,
