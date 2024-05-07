@@ -34,10 +34,10 @@ fun AppActionBar(
             Text(
                 text = title,
                 color = secondary,
-                style = MaterialTheme.typography.titleMedium,
-                fontSize = with(density) { 20.dp.toSp() },
+                style = MaterialTheme.typography.titleLarge,
+                fontSize = with(density) { 18.dp.toSp() },
                 modifier = Modifier
-                    .padding(start = 20.dp)
+                    .padding(start = 10.dp)
             )
         },
         backgroundColor = primary,

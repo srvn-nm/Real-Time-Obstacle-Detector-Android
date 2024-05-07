@@ -1,5 +1,6 @@
 package com.android.rod.screen
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -17,6 +18,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.android.rod.HomePageCategoriesCardView
 import com.android.rod.R
+import com.android.rod.camera.CameraActivity
+import com.android.rod.camera.CameraPreview
 import com.android.rod.ui.theme.tertiary
 
 @Composable
@@ -38,7 +41,7 @@ fun HomePageScreen() {
                         icon = Icons.AutoMirrored.Filled.Input,
                         modifier = Modifier.weight(1f),
                     ){
-
+                        context.startActivity(Intent(context ,CameraActivity::class.java))
                     }
 
                     HomePageCategoriesCardView(

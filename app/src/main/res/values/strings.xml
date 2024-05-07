@@ -5,6 +5,7 @@
     <string name="background_run">Run in background</string>
     <string name="about">About us</string>
     <string name="setting">Setting</string>
+    <string name="title_activity_camera">CameraActivity</string>
 
 
 </resources>
