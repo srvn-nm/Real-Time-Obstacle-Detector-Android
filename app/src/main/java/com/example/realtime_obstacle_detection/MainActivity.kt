@@ -18,12 +18,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import android.Manifest
-import android.os.Build
 import androidx.camera.view.CameraController
 import androidx.camera.view.LifecycleCameraController
-import androidx.compose.foundation.Image
 import androidx.compose.runtime.remember
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.realtime_obstacle_detection.domain.ObjectDetectionResult
@@ -64,7 +61,7 @@ class MainActivity : ComponentActivity(), ObstacleDetector.DetectorListener {
             val analyzer = remember {
                 TensorFlowLiteFrameAnalyzer(
                     obstacleDetector= obstacleDetector,
-                    image
+//                    image
                 )
             }
 
@@ -90,12 +87,12 @@ class MainActivity : ComponentActivity(), ObstacleDetector.DetectorListener {
                         modifier = Modifier.fillMaxSize()
                     )
 
-                    image?.let {
-                        Image(
-                            bitmap = it.asImageBitmap(),
-                            contentDescription = "Detected Image"
-                        )
-                    }
+//                    image?.let {
+//                        Image(
+//                            bitmap = it.asImageBitmap(),
+//                            contentDescription = "Detected Image"
+//                        )
+//                    }
 
                 }
             }
@@ -104,7 +101,8 @@ class MainActivity : ComponentActivity(), ObstacleDetector.DetectorListener {
 
     override fun onDetect(objectDetectionResults: List<ObjectDetectionResult>) {
 
-        print("11111111111111111111111111111")
+        Log.i("obstacle detector", "detected objects: $objectDetectionResults")
+
         image?.let { bmp ->
             processingScope.launch {
                 val updatedBitmap = drawBoundingBoxes(bmp, objectDetectionResults)
@@ -122,7 +120,10 @@ class MainActivity : ComponentActivity(), ObstacleDetector.DetectorListener {
     private fun hasCameraPermission() = ContextCompat.checkSelfPermission(
         this, Manifest.permission.CAMERA
     ) == PackageManager.PERMISSION_GRANTED
+
+
 }
+
 
 /**
 Box(

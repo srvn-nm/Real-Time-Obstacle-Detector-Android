@@ -15,7 +15,6 @@ import java.io.InputStreamReader
 import android.content.Context
 import android.graphics.Bitmap
 import com.example.realtime_obstacle_detection.domain.ObjectDetectionResult
-import com.example.realtime_obstacle_detection.utis.saveImage.saveBitmapAsPNG
 
 class ObstacleDetector(
     private val context: Context,
@@ -98,8 +97,6 @@ class ObstacleDetector(
             detectorListener.onEmptyDetect()
             return
         }
-
-        print(bestBoxes)
 
         detectorListener.onDetect(bestBoxes)
     }
