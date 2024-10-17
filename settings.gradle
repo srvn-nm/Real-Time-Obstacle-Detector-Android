@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Real-time Obstacles Detection System"
+rootProject.name = "Realtime_Obstacle_Detection"
 include ':app'
