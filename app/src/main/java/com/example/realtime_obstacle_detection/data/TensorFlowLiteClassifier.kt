@@ -1,10 +1,10 @@
-package com.android.landmarkdetection.data
+package com.example.realtime_obstacle_detection.data
 
 import android.content.Context
 import android.graphics.Bitmap
 import android.view.Surface
-import com.android.landmarkdetection.domain.ClassificationResults
-import com.android.landmarkdetection.domain.LandmarkClassifier
+import com.example.realtime_obstacle_detection.domain.ClassificationResults
+import com.example.realtime_obstacle_detection.domain.ObstacleClassifier
 import org.tensorflow.lite.support.image.ImageProcessor
 import org.tensorflow.lite.support.image.TensorImage
 import org.tensorflow.lite.task.core.BaseOptions
@@ -16,7 +16,7 @@ class TensorFlowLiteClassifier(
     private val conf: Float = 0.5f,
     private val count: Int = 1,
     private val threads: Int = 2,
-) :LandmarkClassifier{
+) : ObstacleClassifier {
 
     private var classifier: ImageClassifier? = null
 
@@ -82,7 +82,5 @@ class TensorFlowLiteClassifier(
             }
         }?.distinctBy { it.label } ?: emptyList() //no result for picture
     }
-
-
 
 }

@@ -1,4 +1,4 @@
-package com.android.landmarkdetection.domain
+package com.example.realtime_obstacle_detection.domain
 
 /**
  * Data class to represent the results of a classification operation.

@@ -1,13 +1,12 @@
-package com.android.landmarkdetection.domain
+package com.example.realtime_obstacle_detection.domain
 
 import android.graphics.Bitmap
-import android.view.Surface
 import org.tensorflow.lite.task.core.vision.ImageProcessingOptions
 
-interface LandmarkClassifier {
+interface ObstacleClassifier {
 
     /**
-     * Classifies the given bitmap image to identify landmarks.
+     * Classifies the given bitmap image to identify obstacle.
      *
      * @param bitmap The bitmap image to be processed from the camera view.
      * @param rotation The rotation angle of the image which needs to be corrected before processing.

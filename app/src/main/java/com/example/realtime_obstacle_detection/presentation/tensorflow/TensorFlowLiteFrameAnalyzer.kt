@@ -1,13 +1,13 @@
-package com.android.landmarkdetection.presentation.tensorflow
+package com.example.realtime_obstacle_detection.presentation.tensorflow
 
 import android.graphics.Bitmap
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
-import com.android.landmarkdetection.domain.ClassificationResults
-import com.android.landmarkdetection.domain.LandmarkClassifier
+import com.example.realtime_obstacle_detection.domain.ClassificationResults
+import com.example.realtime_obstacle_detection.domain.ObstacleClassifier
 
 class TensorFlowLiteFrameAnalyzer (
-    private val classifier: LandmarkClassifier,
+    private val classifier: ObstacleClassifier,
     private val onResults: (List<ClassificationResults>) -> Unit
 ): ImageAnalysis.Analyzer {
 
