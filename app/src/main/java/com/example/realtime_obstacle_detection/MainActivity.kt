@@ -71,7 +71,6 @@ class MainActivity : ComponentActivity(), ObstacleDetector.DetectorListener {
                             contentDescription = "Processed Image"
                         )
                     }
-
                 }
             }
         }
@@ -130,6 +129,7 @@ class MainActivity : ComponentActivity(), ObstacleDetector.DetectorListener {
 
     override fun onEmptyDetect() {
         Log.i("obstacle detector", "no object has been detected yet")
+        image = null
     }
 
     private fun hasCameraPermission() = ContextCompat.checkSelfPermission(
