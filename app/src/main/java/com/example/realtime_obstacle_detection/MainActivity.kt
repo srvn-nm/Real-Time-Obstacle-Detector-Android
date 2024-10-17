@@ -20,7 +20,6 @@ import kotlinx.coroutines.launch
 import android.Manifest
 import androidx.camera.view.CameraController
 import androidx.camera.view.LifecycleCameraController
-import androidx.compose.runtime.remember
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.realtime_obstacle_detection.domain.ObjectDetectionResult
@@ -28,131 +27,112 @@ import com.example.realtime_obstacle_detection.presentation.camera.CameraPreview
 import com.example.realtime_obstacle_detection.presentation.tensorflow.TensorFlowLiteFrameAnalyzer
 import com.example.realtime_obstacle_detection.ui.theme.Realtime_Obstacle_DetectionTheme
 import com.example.realtime_obstacle_detection.utis.boxdrawer.drawBoundingBoxes
+import androidx.camera.core.CameraSelector
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.extensions.ExtensionMode
+import androidx.camera.extensions.ExtensionsManager
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.lifecycle.LifecycleOwner
+
 
 class MainActivity : ComponentActivity(), ObstacleDetector.DetectorListener {
 
     private var image by mutableStateOf<Bitmap?>(null)
     private lateinit var obstacleDetector: ObstacleDetector
-
+    private lateinit var extensionsManager: ExtensionsManager
+    private lateinit var cameraProvider: ProcessCameraProvider
     private val processingScope = CoroutineScope(Dispatchers.IO)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if(!hasCameraPermission()) {
+        setupPermissions()
+        setupCameraXExtensions()
+        setContent {
+            obstacleDetector = ObstacleDetector(baseContext, this)
+            obstacleDetector.setup()
+            Realtime_Obstacle_DetectionTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+
+                    CameraPreview(
+                        controller = LifecycleCameraController(applicationContext).apply {
+                            setEnabledUseCases(CameraController.IMAGE_ANALYSIS)
+                            bindCameraUseCases(this)
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+
+                    image?.let {
+                        Image(
+                            bitmap = it.asImageBitmap(),
+                            contentDescription = "Processed Image"
+                        )
+                    }
+
+                }
+            }
+        }
+    }
+
+    private fun setupPermissions() {
+        if (!hasCameraPermission()) {
             ActivityCompat.requestPermissions(
                 this, arrayOf(Manifest.permission.CAMERA), 0
             )
         }
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
             != PackageManager.PERMISSION_GRANTED) {
-
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), 0)
-        }
-
-        if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE), 0)
-        }
-
-        setContent {
-
-            obstacleDetector = ObstacleDetector(baseContext, this)
-            obstacleDetector.setup()
-
-            val analyzer = remember {
-                TensorFlowLiteFrameAnalyzer(
-                    obstacleDetector= obstacleDetector,
-//                    image
-                )
-            }
-
-            val controller = remember {
-                LifecycleCameraController(applicationContext).apply {
-                    setEnabledUseCases(CameraController.IMAGE_ANALYSIS)
-                    setImageAnalysisAnalyzer(
-                        ContextCompat.getMainExecutor(applicationContext),
-                        analyzer
-                    )
-                }
-            }
-
-            Realtime_Obstacle_DetectionTheme{
-                // A surface container using the 'background' color from the theme
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    //we need a camera preview as background
-                    CameraPreview(
-                        controller = controller,
-                        modifier = Modifier.fillMaxSize()
-                    )
-
-//                    image?.let {
-//                        Image(
-//                            bitmap = it.asImageBitmap(),
-//                            contentDescription = "Detected Image"
-//                        )
-//                    }
-
-                }
-            }
         }
     }
 
-    override fun onDetect(objectDetectionResults: List<ObjectDetectionResult>) {
+    private fun setupCameraXExtensions() {
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+        cameraProviderFuture.addListener({
+            cameraProvider = cameraProviderFuture.get()
+            val extensionsManagerFuture = ExtensionsManager.getInstanceAsync(this, cameraProvider)
+            extensionsManagerFuture.addListener({
+                extensionsManager = extensionsManagerFuture.get()
+                val selector = CameraSelector.DEFAULT_BACK_CAMERA
+                if (extensionsManager.isExtensionAvailable(selector, ExtensionMode.HDR)) {
+                    val hdrCameraSelector = extensionsManager.getExtensionEnabledCameraSelector(selector, ExtensionMode.HDR)
+                    bindCameraUseCases(LifecycleCameraController(applicationContext).apply {
+                        cameraSelector = hdrCameraSelector
+                    })
+                }
+            }, ContextCompat.getMainExecutor(this))
+        }, ContextCompat.getMainExecutor(this))
+    }
 
+    private fun bindCameraUseCases(controller: LifecycleCameraController) {
+        controller.setImageAnalysisAnalyzer(
+            ContextCompat.getMainExecutor(applicationContext),
+            TensorFlowLiteFrameAnalyzer(
+                obstacleDetector = obstacleDetector,
+                //screenImage = image
+            )
+        )
+        controller.bindToLifecycle(this as LifecycleOwner)
+    }
+
+    override fun onDetect(objectDetectionResults: List<ObjectDetectionResult>, detectedScene: Bitmap) {
         Log.i("obstacle detector", "detected objects: $objectDetectionResults")
 
-        image?.let { bmp ->
             processingScope.launch {
-                val updatedBitmap = drawBoundingBoxes(bmp, objectDetectionResults)
+                val updatedBitmap = drawBoundingBoxes(detectedScene, objectDetectionResults)
                 image = updatedBitmap
             }
-        }
+
     }
 
     override fun onEmptyDetect() {
         Log.i("obstacle detector", "no object has been detected yet")
     }
 
-
-
     private fun hasCameraPermission() = ContextCompat.checkSelfPermission(
         this, Manifest.permission.CAMERA
     ) == PackageManager.PERMISSION_GRANTED
-
-
 }
-
-
-/**
-Box(
-modifier = Modifier
-.fillMaxSize()
-){
-
-//we need a camera preview as background
-CameraPreview(
-controller = controller,
-modifier = Modifier.fillMaxSize()
-)
-
-//our final results will be attached to page header
-Column(
-modifier = Modifier
-.fillMaxWidth()
-.align(Alignment.TopCenter)
-) {
-classifications.forEach {
-Text(
-text = it.label,
-modifier = Modifier
-.fillMaxWidth()
-.background(secondary)
-.padding(10.dp),
-textAlign = TextAlign.Center,
-fontSize = 20.sp,
-color = primary
-)
-}
-} **/

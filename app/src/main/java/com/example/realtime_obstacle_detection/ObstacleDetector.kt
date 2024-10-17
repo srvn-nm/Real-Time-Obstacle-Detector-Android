@@ -98,7 +98,10 @@ class ObstacleDetector(
             return
         }
 
-        detectorListener.onDetect(bestBoxes)
+        detectorListener.onDetect(
+            objectDetectionResults = bestBoxes,
+            detectedScene = image
+        )
     }
 
     private fun bestBox(array: FloatArray) : List<ObjectDetectionResult>? {
@@ -184,7 +187,7 @@ class ObstacleDetector(
 
     interface DetectorListener {
         fun onEmptyDetect()
-        fun onDetect(objectDetectionResults: List<ObjectDetectionResult>)
+        fun onDetect(objectDetectionResults: List<ObjectDetectionResult>, detectedScene: Bitmap)
     }
 }
 
