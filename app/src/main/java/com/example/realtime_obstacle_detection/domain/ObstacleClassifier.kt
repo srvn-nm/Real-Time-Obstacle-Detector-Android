@@ -16,3 +16,13 @@ interface ObstacleClassifier {
 
     //fun getOrientationFromRotation(rotation: Int): ImageProcessingOptions.Orientation
 }
+
+
+//fun getOrientationFromRotation(rotation: Int): ImageProcessingOptions.Orientation {
+//        return when(rotation) {
+//            Surface.ROTATION_270 -> ImageProcessingOptions.Orientation.BOTTOM_RIGHT
+//            Surface.ROTATION_90 -> ImageProcessingOptions.Orientation.TOP_LEFT
+//            Surface.ROTATION_180 -> ImageProcessingOptions.Orientation.RIGHT_BOTTOM
+//            else -> ImageProcessingOptions.Orientation.RIGHT_TOP
+//        }
+//    }

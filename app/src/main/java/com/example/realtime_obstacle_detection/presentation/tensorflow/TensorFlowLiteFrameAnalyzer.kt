@@ -1,9 +1,8 @@
 package com.example.realtime_obstacle_detection.presentation.tensorflow
 
-import android.graphics.Bitmap
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
-import com.example.realtime_obstacle_detection.ObstacleDetector
+import com.example.realtime_obstacle_detection.data.ObstacleDetector
 
 class TensorFlowLiteFrameAnalyzer (
     private val obstacleDetector: ObstacleDetector,

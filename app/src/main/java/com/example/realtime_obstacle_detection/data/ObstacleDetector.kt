@@ -1,4 +1,4 @@
-package com.example.realtime_obstacle_detection
+package com.example.realtime_obstacle_detection.data
 
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.Interpreter
@@ -25,10 +25,8 @@ class ObstacleDetector(
     private val threadsCount :Int = 4,
     private val useNNAPI : Boolean= true,
     private val confidenceThreshold : Float = 0.25F,
-    private val iouThreshold : Float = 0.4F,
-
-
-    ){
+    private val iouThreshold : Float = 0.4F
+){
 
     private var interpreter: Interpreter? = null
     private var labels = mutableListOf<String>()
@@ -36,8 +34,8 @@ class ObstacleDetector(
 
     private var tensorWidth = 0
     private var tensorHeight = 0
-    private var numChannel = 0
-    private var numElements = 0
+    private var channelsCount = 0
+    private var elementsCount = 0
 
     fun setup() {
 
@@ -45,7 +43,6 @@ class ObstacleDetector(
             .add(NormalizeOp( 0f, 255f))
             .add(CastOp(DataType.FLOAT32))
             .build()
-
 
         val options = Interpreter.Options()
         options.numThreads = threadsCount
@@ -60,8 +57,8 @@ class ObstacleDetector(
 
         tensorWidth = inputShape[1]
         tensorHeight = inputShape[2]
-        numChannel = outputShape[1]
-        numElements = outputShape[2]
+        channelsCount = outputShape[1]
+        elementsCount = outputShape[2]
 
         try {
             labelReader()
@@ -88,7 +85,7 @@ class ObstacleDetector(
 
         interpreter ?: return
         imageProcessor?: return
-        if (tensorWidth == 0 || tensorHeight == 0 || numChannel == 0 || numElements == 0) return
+        if (tensorWidth == 0 || tensorHeight == 0 || channelsCount == 0 || elementsCount == 0) return
 
         //we should preprocess the bitmap before detection
         val resizedBitmap = Bitmap
@@ -101,7 +98,7 @@ class ObstacleDetector(
         val processedImage = imageProcessor!!.process(tensorImage)
         val imageBuffer = processedImage.buffer
 
-        val output = TensorBuffer.createFixedSize(intArrayOf(1 , numChannel, numElements), DataType.FLOAT32)
+        val output = TensorBuffer.createFixedSize(intArrayOf(1 , channelsCount, elementsCount), DataType.FLOAT32)
         interpreter?.run(imageBuffer, output.buffer)
 
         val bestBoxes = bestBox(output.floatArray)
@@ -121,26 +118,26 @@ class ObstacleDetector(
 
         val objectDetectionResults = mutableListOf<ObjectDetectionResult>()
 
-        for (classIndex in 0 until numElements) {
+        for (classIndex in 0 until elementsCount) {
             var maxConf = -1.0f
             var maxIdx = -1
             var j = 4
-            var arrayIdx = classIndex + numElements * j
-            while (j < numChannel){
+            var arrayIdx = classIndex + elementsCount * j
+            while (j < channelsCount){
                 if (array[arrayIdx] > maxConf) {
                     maxConf = array[arrayIdx]
                     maxIdx = j - 4
                 }
                 j++
-                arrayIdx += numElements
+                arrayIdx += elementsCount
             }
 
             if (maxConf > confidenceThreshold) {
                 val clsName = labels[maxIdx]
                 val cx = array[classIndex] // 0
-                val cy = array[classIndex + numElements] // 1
-                val w = array[classIndex + numElements * 2]
-                val h = array[classIndex + numElements * 3]
+                val cy = array[classIndex + elementsCount] // 1
+                val w = array[classIndex + elementsCount * 2]
+                val h = array[classIndex + elementsCount * 3]
                 val x1 = cx - (w/2F)
                 val y1 = cy - (h/2F)
                 val x2 = cx + (w/2F)
@@ -205,6 +202,5 @@ class ObstacleDetector(
         val box2Area = box2.width * box2.height
         return intersectionArea / (box1Area + box2Area - intersectionArea)
     }
-
 
 }

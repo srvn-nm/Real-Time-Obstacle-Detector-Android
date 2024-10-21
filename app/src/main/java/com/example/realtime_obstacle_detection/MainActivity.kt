@@ -34,6 +34,7 @@ import androidx.camera.extensions.ExtensionsManager
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.LifecycleOwner
+import com.example.realtime_obstacle_detection.data.ObstacleDetector
 import com.example.realtime_obstacle_detection.domain.ObstacleClassifier
 
 
@@ -50,8 +51,14 @@ class MainActivity : ComponentActivity(), ObstacleClassifier {
         setupPermissions()
         setupCameraXExtensions()
         setContent {
-            obstacleDetector = ObstacleDetector(baseContext, this)
+
+            obstacleDetector = ObstacleDetector(
+                context = baseContext,
+                obstacleClassifier = this
+            )
+
             obstacleDetector.setup()
+
             Realtime_Obstacle_DetectionTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -74,18 +81,6 @@ class MainActivity : ComponentActivity(), ObstacleClassifier {
                     }
                 }
             }
-        }
-    }
-
-    private fun setupPermissions() {
-        if (!hasCameraPermission()) {
-            ActivityCompat.requestPermissions(
-                this, arrayOf(Manifest.permission.CAMERA), 0
-            )
-        }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-            != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), 0)
         }
     }
 
@@ -119,13 +114,13 @@ class MainActivity : ComponentActivity(), ObstacleClassifier {
     }
 
     override fun onDetect(objectDetectionResults: List<ObjectDetectionResult>, detectedScene: Bitmap) {
+
         Log.i("obstacle detector", "detected objects: $objectDetectionResults")
 
-            processingScope.launch {
-                val updatedBitmap = drawBoundingBoxes(detectedScene, objectDetectionResults)
-                image = updatedBitmap
-            }
-
+        processingScope.launch {
+            val updatedBitmap = drawBoundingBoxes(detectedScene, objectDetectionResults)
+            image = updatedBitmap
+        }
     }
 
     override fun onEmptyDetect() {
@@ -133,7 +128,16 @@ class MainActivity : ComponentActivity(), ObstacleClassifier {
         image = null
     }
 
-    private fun hasCameraPermission() = ContextCompat.checkSelfPermission(
-        this, Manifest.permission.CAMERA
-    ) == PackageManager.PERMISSION_GRANTED
+    private fun setupPermissions() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), 0)
+
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), 0)
+
+        }
+    }
 }
