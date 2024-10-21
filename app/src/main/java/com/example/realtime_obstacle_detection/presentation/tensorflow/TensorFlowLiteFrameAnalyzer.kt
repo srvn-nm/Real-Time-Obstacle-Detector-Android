@@ -12,7 +12,7 @@ class TensorFlowLiteFrameAnalyzer (
     private var frameSkipCounter = 0
 
     override fun analyze(image: ImageProxy) {
-        if(frameSkipCounter % 5 == 0) {
+        if(frameSkipCounter % 2== 0) {
             val bitmap = image
                 .toBitmap()
             obstacleDetector.detect(image = bitmap)
