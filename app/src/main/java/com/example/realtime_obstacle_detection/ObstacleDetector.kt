@@ -21,35 +21,37 @@ class ObstacleDetector(
     private val context: Context,
     private val obstacleClassifier: ObstacleClassifier,
     private val modelPath :String = "best_float32.tflite",
-    private val labelPath :String = "labels.txt"
-){
+    private val labelPath :String = "labels.txt",
+    private val threadsCount :Int = 4,
+    private val useNNAPI : Boolean= true,
+    private val confidenceThreshold : Float = 0.25F,
+    private val iouThreshold : Float = 0.4F,
+
+
+    ){
 
     private var interpreter: Interpreter? = null
+    private var labels = mutableListOf<String>()
+    private var imageProcessor : ImageProcessor? = null
 
     private var tensorWidth = 0
     private var tensorHeight = 0
     private var numChannel = 0
     private var numElements = 0
 
-    private var labels = mutableListOf<String>()
-
-    private val imageProcessor = ImageProcessor.Builder()
-        .add(NormalizeOp( 0f, 255f))
-        .add(CastOp(DataType.FLOAT32))
-        .build()
-
-    companion object {
-        private const val CONFIDENCE_THRESHOLD = 0.25F
-        private const val IOU_THRESHOLD = 0.4F
-    }
-
     fun setup() {
 
-        val model = FileUtil.loadMappedFile(context, modelPath)
+        imageProcessor = ImageProcessor.Builder()
+            .add(NormalizeOp( 0f, 255f))
+            .add(CastOp(DataType.FLOAT32))
+            .build()
+
 
         val options = Interpreter.Options()
-        options.numThreads = 4
-        options.useNNAPI = true
+        options.numThreads = threadsCount
+        options.useNNAPI = useNNAPI
+
+        val model = FileUtil.loadMappedFile(context, modelPath)
 
         interpreter = Interpreter(model, options)
 
@@ -62,26 +64,30 @@ class ObstacleDetector(
         numElements = outputShape[2]
 
         try {
-
-            val inputStream: InputStream = context.assets.open(labelPath)
-            val reader = BufferedReader(InputStreamReader(inputStream))
-
-            var line: String? = reader.readLine()
-            while (line != null && line != "") {
-                labels.add(line)
-                line = reader.readLine()
-            }
-
-            reader.close()
-            inputStream.close()
+            labelReader()
         } catch (e: IOException) {
             e.printStackTrace()
         }
     }
 
+    private fun labelReader(){
+        val inputStream: InputStream = context.assets.open(labelPath)
+        val reader = BufferedReader(InputStreamReader(inputStream))
+
+        var line: String? = reader.readLine()
+        while (line != null && line != "") {
+            labels.add(line)
+            line = reader.readLine()
+        }
+
+        reader.close()
+        inputStream.close()
+    }
+
     fun detect(image: Bitmap){
 
         interpreter ?: return
+        imageProcessor?: return
         if (tensorWidth == 0 || tensorHeight == 0 || numChannel == 0 || numElements == 0) return
 
         //we should preprocess the bitmap before detection
@@ -92,7 +98,7 @@ class ObstacleDetector(
         val tensorImage = TensorImage(DataType.FLOAT32)
         tensorImage.load(resizedBitmap)
 
-        val processedImage = imageProcessor.process(tensorImage)
+        val processedImage = imageProcessor!!.process(tensorImage)
         val imageBuffer = processedImage.buffer
 
         val output = TensorBuffer.createFixedSize(intArrayOf(1 , numChannel, numElements), DataType.FLOAT32)
@@ -110,15 +116,16 @@ class ObstacleDetector(
         )
     }
 
+
     private fun bestBox(array: FloatArray) : List<ObjectDetectionResult>? {
 
         val objectDetectionResults = mutableListOf<ObjectDetectionResult>()
 
-        for (c in 0 until numElements) {
+        for (classIndex in 0 until numElements) {
             var maxConf = -1.0f
             var maxIdx = -1
             var j = 4
-            var arrayIdx = c + numElements * j
+            var arrayIdx = classIndex + numElements * j
             while (j < numChannel){
                 if (array[arrayIdx] > maxConf) {
                     maxConf = array[arrayIdx]
@@ -128,12 +135,12 @@ class ObstacleDetector(
                 arrayIdx += numElements
             }
 
-            if (maxConf > CONFIDENCE_THRESHOLD) {
+            if (maxConf > confidenceThreshold) {
                 val clsName = labels[maxIdx]
-                val cx = array[c] // 0
-                val cy = array[c + numElements] // 1
-                val w = array[c + numElements * 2]
-                val h = array[c + numElements * 3]
+                val cx = array[classIndex] // 0
+                val cy = array[classIndex + numElements] // 1
+                val w = array[classIndex + numElements * 2]
+                val h = array[classIndex + numElements * 3]
                 val x1 = cx - (w/2F)
                 val y1 = cy - (h/2F)
                 val x2 = cx + (w/2F)
@@ -179,7 +186,7 @@ class ObstacleDetector(
             while (iterator.hasNext()) {
                 val nextBox = iterator.next()
                 val iou = calculateIoU(first, nextBox)
-                if (iou >= IOU_THRESHOLD) {
+                if (iou >= iouThreshold) {
                     iterator.remove()
                 }
             }
@@ -201,4 +208,3 @@ class ObstacleDetector(
 
 
 }
-

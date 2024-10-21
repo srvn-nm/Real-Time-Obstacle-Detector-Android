@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.view.Surface
 import com.example.realtime_obstacle_detection.domain.ClassificationResults
+import com.example.realtime_obstacle_detection.domain.ObjectDetectionResult
 import com.example.realtime_obstacle_detection.domain.ObstacleClassifier
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.support.common.FileUtil
@@ -86,7 +87,7 @@ class TensorFlowLiteClassifier(
         }
     }
 
-    override fun getOrientationFromRotation(rotation: Int): ImageProcessingOptions.Orientation {
+     fun getOrientationFromRotation(rotation: Int): ImageProcessingOptions.Orientation {
         return when(rotation) {
             Surface.ROTATION_270 -> ImageProcessingOptions.Orientation.BOTTOM_RIGHT
             Surface.ROTATION_90 -> ImageProcessingOptions.Orientation.TOP_LEFT
@@ -95,7 +96,7 @@ class TensorFlowLiteClassifier(
         }
     }
 
-    override fun classify(bitmap: Bitmap, rotation: Int): List<ClassificationResults> {
+     fun classify(bitmap: Bitmap, rotation: Int): List<ClassificationResults> {
 
         //initialization of classifier
         if(classifier == null) {
@@ -121,6 +122,17 @@ class TensorFlowLiteClassifier(
                 )
             }
         }?.distinctBy { it.label } ?: emptyList() //no result for picture
+    }
+
+    override fun onEmptyDetect() {
+        TODO("Not yet implemented")
+    }
+
+    override fun onDetect(
+        objectDetectionResults: List<ObjectDetectionResult>,
+        detectedScene: Bitmap
+    ) {
+        TODO("Not yet implemented")
     }
 
 }
