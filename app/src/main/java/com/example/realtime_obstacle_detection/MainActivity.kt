@@ -34,9 +34,10 @@ import androidx.camera.extensions.ExtensionsManager
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.LifecycleOwner
+import com.example.realtime_obstacle_detection.domain.ObstacleClassifier
 
 
-class MainActivity : ComponentActivity(), ObstacleDetector.DetectorListener {
+class MainActivity : ComponentActivity(), ObstacleClassifier {
 
     private var image by mutableStateOf<Bitmap?>(null)
     private lateinit var obstacleDetector: ObstacleDetector
