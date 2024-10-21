@@ -15,14 +15,16 @@ import java.io.InputStreamReader
 import android.content.Context
 import android.graphics.Bitmap
 import com.example.realtime_obstacle_detection.domain.ObjectDetectionResult
+import com.example.realtime_obstacle_detection.domain.ObstacleClassifier
 
 class ObstacleDetector(
     private val context: Context,
-    private val detectorListener: DetectorListener
-) {
+    private val obstacleClassifier: ObstacleClassifier,
+    private val modelPath :String = "best_float32.tflite",
+    private val labelPath :String = "labels.txt"
+){
+
     private var interpreter: Interpreter? = null
-    private val modelPath = "best_float32.tflite"
-    private val labelPath = "labels.txt"
 
     private var tensorWidth = 0
     private var tensorHeight = 0
@@ -34,7 +36,7 @@ class ObstacleDetector(
     private val imageProcessor = ImageProcessor.Builder()
         .add(NormalizeOp( 0f, 255f))
         .add(CastOp(DataType.FLOAT32))
-        .build() // preprocess input
+        .build()
 
     companion object {
         private const val CONFIDENCE_THRESHOLD = 0.25F
@@ -42,10 +44,13 @@ class ObstacleDetector(
     }
 
     fun setup() {
+
         val model = FileUtil.loadMappedFile(context, modelPath)
 
         val options = Interpreter.Options()
         options.numThreads = 4
+        options.useNNAPI = true
+
         interpreter = Interpreter(model, options)
 
         val inputShape = interpreter?.getInputTensor(0)?.shape() ?: return
@@ -57,6 +62,7 @@ class ObstacleDetector(
         numElements = outputShape[2]
 
         try {
+
             val inputStream: InputStream = context.assets.open(labelPath)
             val reader = BufferedReader(InputStreamReader(inputStream))
 
@@ -94,11 +100,11 @@ class ObstacleDetector(
 
         val bestBoxes = bestBox(output.floatArray)
         if (bestBoxes == null) {
-            detectorListener.onEmptyDetect()
+            obstacleClassifier.onEmptyDetect()
             return
         }
 
-        detectorListener.onDetect(
+        obstacleClassifier.onDetect(
             objectDetectionResults = bestBoxes,
             detectedScene = image
         )
@@ -132,29 +138,37 @@ class ObstacleDetector(
                 val y1 = cy - (h/2F)
                 val x2 = cx + (w/2F)
                 val y2 = cy + (h/2F)
-                if (x1 < 0F || x1 > 1F) continue
-                if (y1 < 0F || y1 > 1F) continue
-                if (x2 < 0F || x2 > 1F) continue
-                if (y2 < 0F || y2 > 1F) continue
+                if (x1 < 0F || x1 > 1F)
+                    continue
+                if (y1 < 0F || y1 > 1F)
+                    continue
+                if (x2 < 0F || x2 > 1F)
+                    continue
+                if (y2 < 0F || y2 > 1F)
+                    continue
 
                 objectDetectionResults.add(
                     ObjectDetectionResult(
-                        x1 = x1, y1 = y1, x2 = x2, y2 = y2,
-                        cx = cx, cy = cy, w = w, h = h,
-                        cnf = maxConf, cls = maxIdx, clsName = clsName
+                        x1 = x1, y1 = y1, x2 = x2, y2 = y2, cx = cx, cy = cy, width = w, height = h,
+                        confidenceRate = maxConf, classIndex = maxIdx, className = clsName
                     )
                 )
             }
         }
 
-        if (objectDetectionResults.isEmpty()) return null
+        if (objectDetectionResults.isEmpty())
+            return null
 
         return applyNMS(objectDetectionResults)
     }
 
     private fun applyNMS(boxes: List<ObjectDetectionResult>) : MutableList<ObjectDetectionResult> {
-        val sortedBoxes = boxes.sortedByDescending { it.cnf }.toMutableList()
+
         val selectedBoxes = mutableListOf<ObjectDetectionResult>()
+
+        val sortedBoxes = boxes.sortedByDescending {
+            it.confidenceRate
+        }.toMutableList()
 
         while(sortedBoxes.isNotEmpty()) {
             val first = sortedBoxes.first()
@@ -180,14 +194,11 @@ class ObstacleDetector(
         val x2 = minOf(box1.x2, box2.x2)
         val y2 = minOf(box1.y2, box2.y2)
         val intersectionArea = maxOf(0F, x2 - x1) * maxOf(0F, y2 - y1)
-        val box1Area = box1.w * box1.h
-        val box2Area = box2.w * box2.h
+        val box1Area = box1.width * box1.height
+        val box2Area = box2.width * box2.height
         return intersectionArea / (box1Area + box2Area - intersectionArea)
     }
 
-    interface DetectorListener {
-        fun onEmptyDetect()
-        fun onDetect(objectDetectionResults: List<ObjectDetectionResult>, detectedScene: Bitmap)
-    }
+
 }
 
