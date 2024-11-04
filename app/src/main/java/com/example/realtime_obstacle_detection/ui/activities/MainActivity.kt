@@ -1,4 +1,4 @@
-package com.example.realtime_obstacle_detection
+package com.example.realtime_obstacle_detection.ui.activities
 
 
 import android.content.pm.PackageManager

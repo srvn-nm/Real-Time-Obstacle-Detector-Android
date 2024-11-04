@@ -45,7 +45,7 @@
             android:label="@string/title_activity_walk_around"
             android:theme="@style/Theme.Realtime_Obstacle_Detection" />
         <activity
-            android:name=".MainActivity"
+            android:name=".ui.activities.MainActivity"
             android:exported="true"
             android:theme="@style/Theme.Realtime_Obstacle_Detection" >
             <intent-filter>
