@@ -13,25 +13,25 @@ class TensorFlowLiteFrameAnalyzer (
     private val obstacleDetector: ObstacleDetector,
 ): ImageAnalysis.Analyzer {
 
-    private fun getOrientationFromRotation(rotation: Int): Int {
-        return when(rotation) {
-            Surface.ROTATION_270 -> 270
-            Surface.ROTATION_90 -> 90
-            Surface.ROTATION_180 -> 180
-            else -> 0
-        }
-    }
-
-    private fun rotateBitmap(bitmap: Bitmap, degrees: Int): Bitmap {
-        val matrix = Matrix().apply { postRotate(degrees.toFloat()) }
-        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
-    }
+//    private fun getOrientationFromRotation(rotation: Int): Int {
+//        return when(rotation) {
+//            Surface.ROTATION_270 -> 270
+//            Surface.ROTATION_90 -> 90
+//            Surface.ROTATION_180 -> 180
+//            else -> 0
+//        }
+//    }
+//
+//    private fun rotateBitmap(bitmap: Bitmap, degrees: Int): Bitmap {
+//        val matrix = Matrix().apply { postRotate(degrees.toFloat()) }
+//        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+//    }
 
     override fun analyze(image: ImageProxy) {
 
             val startTime = System.currentTimeMillis()
 
-//            val orientation = getOrientationFromRotation(rotation = image.imageInfo.rotationDegrees)
+//           val orientation = getOrientationFromRotation(rotation = image.imageInfo.rotationDegrees)
             val bitmap = image.toBitmap()
 //            val rotatedBitmap = rotateBitmap(bitmap, orientation)
 
