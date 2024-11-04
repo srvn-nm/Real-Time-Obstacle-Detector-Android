@@ -1,13 +1,11 @@
 package com.example.realtime_obstacle_detection.ui.activities
 
-import android.Manifest
-import android.content.pm.PackageManager
+
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.camera.core.CameraSelector
 import androidx.camera.extensions.ExtensionMode
 import androidx.camera.extensions.ExtensionsManager
