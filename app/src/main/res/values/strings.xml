@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Realtime Obstacle Detection</string>
+    <string name="title_activity_blind_detector">BlindDetectorActivity</string>
+    <string name="title_activity_about_us">AboutUsActivity</string>
+    <string name="title_activity_walk_around">WalkAroundActivity</string>
+    <string name="title_activity_on_detection">OnDetectionActivity</string>
 </resources>
