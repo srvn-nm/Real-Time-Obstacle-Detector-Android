@@ -107,7 +107,6 @@ class MainActivity : ComponentActivity(), ObstacleClassifier {
             ContextCompat.getMainExecutor(applicationContext),
             TensorFlowLiteFrameAnalyzer(
                 obstacleDetector = obstacleDetector,
-                //screenImage = image
             )
         )
         controller.bindToLifecycle(this as LifecycleOwner)
@@ -118,8 +117,16 @@ class MainActivity : ComponentActivity(), ObstacleClassifier {
         Log.i("obstacle detector", "detected objects: $objectDetectionResults")
 
         processingScope.launch {
+
+            val startTime = System.currentTimeMillis()
             val updatedBitmap = drawBoundingBoxes(detectedScene, objectDetectionResults)
             image = updatedBitmap
+
+            val endTime = System.currentTimeMillis()
+
+            val duration = (endTime - startTime) / 1000.0
+
+            Log.d("bounding box drawing", "bounding box drawing took $duration seconds")
         }
     }
 
@@ -129,15 +136,13 @@ class MainActivity : ComponentActivity(), ObstacleClassifier {
     }
 
     private fun setupPermissions() {
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), 0)
-
         }
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), 0)
-
         }
     }
 }

@@ -14,14 +14,15 @@ import java.io.InputStream
 import java.io.InputStreamReader
 import android.content.Context
 import android.graphics.Bitmap
+import android.util.Log
 import com.example.realtime_obstacle_detection.domain.ObjectDetectionResult
 import com.example.realtime_obstacle_detection.domain.ObstacleClassifier
 
 class ObstacleDetector(
     private val context: Context,
     private val obstacleClassifier: ObstacleClassifier,
-    private val modelPath :String = "best_float32.tflite",
-    private val labelPath :String = "labels.txt",
+    private val modelPath :String = "obstacle_detector_float16.tflite",
+    private val labelPath :String = "obstacle_detector_labels.txt",
     private val threadsCount :Int = 4,
     private val useNNAPI : Boolean= true,
     private val confidenceThreshold : Float = 0.25F,
@@ -83,8 +84,10 @@ class ObstacleDetector(
 
     fun detect(image: Bitmap){
 
+        var startTime = System.currentTimeMillis()
+
         interpreter ?: return
-        imageProcessor?: return
+
         if (tensorWidth == 0 || tensorHeight == 0 || channelsCount == 0 || elementsCount == 0) return
 
         //we should preprocess the bitmap before detection
@@ -95,12 +98,27 @@ class ObstacleDetector(
         val tensorImage = TensorImage(DataType.FLOAT32)
         tensorImage.load(resizedBitmap)
 
-        val processedImage = imageProcessor!!.process(tensorImage)
+        val processedImage = imageProcessor!!
+            .process(tensorImage)
         val imageBuffer = processedImage.buffer
 
-        val output = TensorBuffer.createFixedSize(intArrayOf(1 , channelsCount, elementsCount), DataType.FLOAT32)
-        interpreter?.run(imageBuffer, output.buffer)
 
+        val output = TensorBuffer.createFixedSize(intArrayOf(1 , channelsCount, elementsCount), DataType.FLOAT32)
+
+        var endTime = System.currentTimeMillis()
+
+        var duration = (endTime - startTime) / 1000.0
+
+        Log.d("processing time", "preparation of imageprocessor and fundamental variables took $duration seconds")
+
+        startTime = System.currentTimeMillis()
+        interpreter?.run(imageBuffer, output.buffer)
+        endTime = System.currentTimeMillis()
+
+        duration = (endTime - startTime) / 1000.0
+        Log.d("model inference time", "model($modelPath) inference took $duration seconds")
+
+        startTime = System.currentTimeMillis()
         val bestBoxes = bestBox(output.floatArray)
         if (bestBoxes == null) {
             obstacleClassifier.onEmptyDetect()
@@ -111,11 +129,16 @@ class ObstacleDetector(
             objectDetectionResults = bestBoxes,
             detectedScene = image
         )
+        endTime = System.currentTimeMillis()
+
+        duration = (endTime - startTime) / 1000.0
+        Log.d("processing time", "bounding box and saving operations took $duration seconds")
     }
 
 
     private fun bestBox(array: FloatArray) : List<ObjectDetectionResult>? {
 
+        var startTime = System.currentTimeMillis()
         val objectDetectionResults = mutableListOf<ObjectDetectionResult>()
 
         for (classIndex in 0 until elementsCount) {
@@ -159,6 +182,11 @@ class ObstacleDetector(
                 )
             }
         }
+
+        var endTime = System.currentTimeMillis()
+
+        var duration = (endTime - startTime) / 1000.0
+        Log.d("processing time", "finding the bounding box and saving operations took $duration seconds")
 
         if (objectDetectionResults.isEmpty())
             return null

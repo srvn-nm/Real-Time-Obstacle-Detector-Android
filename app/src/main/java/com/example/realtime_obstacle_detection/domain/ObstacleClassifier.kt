@@ -1,6 +1,8 @@
 package com.example.realtime_obstacle_detection.domain
 
 import android.graphics.Bitmap
+import android.view.Surface
+import org.tensorflow.lite.task.core.vision.ImageProcessingOptions
 
 interface ObstacleClassifier {
 
@@ -14,15 +16,4 @@ interface ObstacleClassifier {
      */
     fun onDetect(objectDetectionResults: List<ObjectDetectionResult>, detectedScene: Bitmap)
 
-    //fun getOrientationFromRotation(rotation: Int): ImageProcessingOptions.Orientation
 }
-
-
-//fun getOrientationFromRotation(rotation: Int): ImageProcessingOptions.Orientation {
-//        return when(rotation) {
-//            Surface.ROTATION_270 -> ImageProcessingOptions.Orientation.BOTTOM_RIGHT
-//            Surface.ROTATION_90 -> ImageProcessingOptions.Orientation.TOP_LEFT
-//            Surface.ROTATION_180 -> ImageProcessingOptions.Orientation.RIGHT_BOTTOM
-//            else -> ImageProcessingOptions.Orientation.RIGHT_TOP
-//        }
-//    }
