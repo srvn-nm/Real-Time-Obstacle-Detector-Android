@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
+import android.util.Log
 import com.example.realtime_obstacle_detection.domain.ObjectDetectionResult
 import com.example.realtime_obstacle_detection.utis.saveImage.saveBitmapAsPNG
 
@@ -19,11 +20,14 @@ fun drawBoundingBoxes(bitmap: Bitmap, boxes: List<ObjectDetectionResult>): Bitma
     }
     val textPaint = Paint().apply {
         color = Color.BLUE
-        textSize = 80f
+        textSize = 40f
         typeface = Typeface.DEFAULT_BOLD
     }
 
     for (box in boxes) {
+
+        Log.i("obstacle detector distance ratio", "distance ratio: ${box.distance}")
+
         val rect = RectF(
             box.x1 * mutableBitmap.width,
             box.y1 * mutableBitmap.height,
@@ -31,7 +35,7 @@ fun drawBoundingBoxes(bitmap: Bitmap, boxes: List<ObjectDetectionResult>): Bitma
             box.y2 * mutableBitmap.height
         )
         canvas.drawRect(rect, paint)
-        canvas.drawText(box.className, rect.left, rect.bottom, textPaint)
+        canvas.drawText("${box.className} ${box.distance}cm", rect.left, rect.bottom, textPaint)
 
         saveBitmapAsPNG(mutableBitmap, box.className)
     }

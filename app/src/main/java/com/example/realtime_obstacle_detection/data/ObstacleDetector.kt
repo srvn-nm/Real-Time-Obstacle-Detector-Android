@@ -17,6 +17,8 @@ import android.graphics.Bitmap
 import android.util.Log
 import com.example.realtime_obstacle_detection.domain.ObjectDetectionResult
 import com.example.realtime_obstacle_detection.domain.ObstacleClassifier
+import com.example.realtime_obstacle_detection.utis.calculateDistance
+import com.example.realtime_obstacle_detection.utis.getFocalLength
 
 class ObstacleDetector(
     private val context: Context,
@@ -32,6 +34,7 @@ class ObstacleDetector(
     private var interpreter: Interpreter? = null
     private var labels = mutableListOf<String>()
     private var imageProcessor : ImageProcessor? = null
+    private var  focalLength : Float?= null
 
     private var tensorWidth = 0
     private var tensorHeight = 0
@@ -39,6 +42,8 @@ class ObstacleDetector(
     private var elementsCount = 0
 
     fun setup() {
+
+        focalLength = getFocalLength(context)
 
         imageProcessor = ImageProcessor.Builder()
             .add(NormalizeOp( 0f, 255f))
@@ -129,12 +134,13 @@ class ObstacleDetector(
             objectDetectionResults = bestBoxes,
             detectedScene = image
         )
+
         endTime = System.currentTimeMillis()
 
         duration = (endTime - startTime) / 1000.0
-        Log.d("processing time", "bounding box and saving operations took $duration seconds")
-    }
+        Log.d("processing time", "bounding box and distance calculation and saving operations took $duration seconds")
 
+    }
 
     private fun bestBox(array: FloatArray) : List<ObjectDetectionResult>? {
 
@@ -162,9 +168,14 @@ class ObstacleDetector(
                 val w = array[classIndex + elementsCount * 2]
                 val h = array[classIndex + elementsCount * 3]
                 val x1 = cx - (w/2F)
-                val y1 = cy - (h/2F)
+                val y1 = cy - (w/2F)
                 val x2 = cx + (w/2F)
                 val y2 = cy + (h/2F)
+
+
+
+                val distance = calculateDistance(className = clsName ,  width = w,focalLength = focalLength!!)
+
                 if (x1 < 0F || x1 > 1F)
                     continue
                 if (y1 < 0F || y1 > 1F)
@@ -177,7 +188,7 @@ class ObstacleDetector(
                 objectDetectionResults.add(
                     ObjectDetectionResult(
                         x1 = x1, y1 = y1, x2 = x2, y2 = y2, cx = cx, cy = cy, width = w, height = h,
-                        confidenceRate = maxConf, classIndex = maxIdx, className = clsName
+                        confidenceRate = maxConf, classIndex = maxIdx, className = clsName, distance = distance
                     )
                 )
             }
