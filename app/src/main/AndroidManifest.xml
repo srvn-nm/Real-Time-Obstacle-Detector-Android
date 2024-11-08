@@ -34,11 +34,7 @@
             android:exported="false"
             android:label="@string/title_activity_blind_detector"
             android:theme="@style/Theme.Realtime_Obstacle_Detection" />
-        <activity
-            android:name=".ui.activities.AboutUsActivity"
-            android:exported="false"
-            android:label="@string/title_activity_about_us"
-            android:theme="@style/Theme.Realtime_Obstacle_Detection" />
+
         <activity
             android:name=".ui.activities.WalkAroundActivity"
             android:exported="false"
