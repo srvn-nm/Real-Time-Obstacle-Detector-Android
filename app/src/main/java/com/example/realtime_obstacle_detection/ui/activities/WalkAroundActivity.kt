@@ -7,16 +7,13 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.example.realtime_obstacle_detection.domain.ObjectDetectionResult
 import com.example.realtime_obstacle_detection.domain.ObstacleClassifier
-import com.example.realtime_obstacle_detection.ui.theme.Realtime_Obstacle_DetectionTheme
 
 class WalkAroundActivity : ComponentActivity(), ObstacleClassifier {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            Realtime_Obstacle_DetectionTheme {
 
-            }
         }
     }
 

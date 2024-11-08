@@ -14,8 +14,7 @@ import androidx.camera.view.CameraController
 import androidx.camera.view.LifecycleCameraController
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -28,7 +27,7 @@ import com.example.realtime_obstacle_detection.domain.ObjectDetectionResult
 import com.example.realtime_obstacle_detection.domain.ObstacleClassifier
 import com.example.realtime_obstacle_detection.presentation.camera.CameraPreview
 import com.example.realtime_obstacle_detection.presentation.tensorflow.TensorFlowLiteFrameAnalyzer
-import com.example.realtime_obstacle_detection.ui.theme.Realtime_Obstacle_DetectionTheme
+import com.example.realtime_obstacle_detection.ui.theme.primary
 import com.example.realtime_obstacle_detection.utis.boxdrawer.drawBoundingBoxes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -54,28 +53,27 @@ class OnDetectionActivity : ComponentActivity(), ObstacleClassifier {
 
             obstacleDetector.setup()
 
-            Realtime_Obstacle_DetectionTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = primary
+            ) {
 
-                    CameraPreview(
-                        controller = LifecycleCameraController(applicationContext).apply {
-                            setEnabledUseCases(CameraController.IMAGE_ANALYSIS)
-                            bindCameraUseCases(this)
-                        },
-                        modifier = Modifier.fillMaxSize()
+                CameraPreview(
+                    controller = LifecycleCameraController(applicationContext).apply {
+                        setEnabledUseCases(CameraController.IMAGE_ANALYSIS)
+                        bindCameraUseCases(this)
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                image?.let {
+                    Image(
+                        bitmap = it.asImageBitmap(),
+                        contentDescription = "Processed Image"
                     )
-
-                    image?.let {
-                        Image(
-                            bitmap = it.asImageBitmap(),
-                            contentDescription = "Processed Image"
-                        )
-                    }
                 }
             }
+
         }
     }
 
