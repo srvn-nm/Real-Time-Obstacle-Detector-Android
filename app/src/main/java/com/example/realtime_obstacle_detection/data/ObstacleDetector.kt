@@ -17,6 +17,7 @@ import android.graphics.Bitmap
 import android.util.Log
 import com.example.realtime_obstacle_detection.domain.ObjectDetectionResult
 import com.example.realtime_obstacle_detection.domain.ObstacleClassifier
+import com.example.realtime_obstacle_detection.utis.camera.getCameraSensorInfo
 import com.example.realtime_obstacle_detection.utis.compose.boundingBox.calculateDistance
 import com.example.realtime_obstacle_detection.utis.camera.getFocalLength
 
@@ -35,6 +36,7 @@ class ObstacleDetector(
     private var labels = mutableListOf<String>()
     private var imageProcessor : ImageProcessor? = null
     private var  focalLength : Float?= null
+    private var  sensorHeight : Float?= null
 
     private var tensorWidth = 0
     private var tensorHeight = 0
@@ -44,6 +46,7 @@ class ObstacleDetector(
     fun setup() {
 
         focalLength = getFocalLength(context)
+        sensorHeight = getCameraSensorInfo(context)?.height
 
         imageProcessor = ImageProcessor.Builder()
             .add(NormalizeOp( 0f, 255f))
@@ -163,18 +166,22 @@ class ObstacleDetector(
 
             if (maxConf > confidenceThreshold) {
                 val clsName = labels[maxIdx]
-                val cx = array[classIndex] // 0
-                val cy = array[classIndex + elementsCount] // 1
-                val w = array[classIndex + elementsCount * 2]
-                val h = array[classIndex + elementsCount * 3]
-                val x1 = cx - (w/2F)
-                val y1 = cy - (w/2F)
-                val x2 = cx + (w/2F)
-                val y2 = cy + (h/2F)
+                val cx = array[classIndex]
+                val cy = array[classIndex + elementsCount]
+                val width = array[classIndex + elementsCount * 2]
+                val height = array[classIndex + elementsCount * 3]
+                val x1 = cx - (width/2F)
+                val y1 = cy - (width/2F)
+                val x2 = cx + (width/2F)
+                val y2 = cy + (height/2F)
 
-
-
-                val distance = calculateDistance(className = clsName ,  width = w,focalLength = focalLength!!)
+                val distance = calculateDistance(
+                    className= clsName,
+                    objectHeightInPixels= height,
+                    focalLengthInMM=focalLength,
+                    imageHeightInPixels=tensorHeight.toFloat(),
+                    sensorHeightInMM = sensorHeight
+                )
 
                 if (x1 < 0F || x1 > 1F)
                     continue
@@ -187,8 +194,15 @@ class ObstacleDetector(
 
                 objectDetectionResults.add(
                     ObjectDetectionResult(
-                        x1 = x1, y1 = y1, x2 = x2, y2 = y2, cx = cx, cy = cy, width = w, height = h,
-                        confidenceRate = maxConf, classIndex = maxIdx, className = clsName, distance = distance
+                        x1 = x1,
+                        y1 = y1,
+                        x2 = x2,
+                        y2 = y2,
+                        width = width,
+                        height = height,
+                        confidenceRate = maxConf,
+                        className = clsName,
+                        distance = distance
                     )
                 )
             }
