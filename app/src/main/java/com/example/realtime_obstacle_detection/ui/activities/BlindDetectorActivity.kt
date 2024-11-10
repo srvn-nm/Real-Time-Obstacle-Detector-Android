@@ -2,6 +2,7 @@ package com.example.realtime_obstacle_detection.ui.activities
 
 import android.graphics.Bitmap
 import android.os.Bundle
+import android.speech.tts.TextToSpeech
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -26,33 +27,32 @@ import com.example.realtime_obstacle_detection.ui.theme.primary
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.Locale
 
-class BlindDetectorActivity : ComponentActivity(),ObstacleClassifier{
 
+class BlindDetectorActivity : ComponentActivity(), ObstacleClassifier, TextToSpeech.OnInitListener {
     private lateinit var obstacleDetector: ObstacleDetector
     private lateinit var extensionsManager: ExtensionsManager
     private lateinit var cameraProvider: ProcessCameraProvider
+    private var textToSpeech: TextToSpeech? = null
     private val processingScope = CoroutineScope(Dispatchers.IO)
 
     override fun onCreate(savedInstanceState: Bundle?) {
-
         super.onCreate(savedInstanceState)
+        textToSpeech = TextToSpeech(this, this)
         setupCameraXExtensions()
 
         setContent {
-
             obstacleDetector = ObstacleDetector(
                 context = baseContext,
-                obstacleClassifier = this
+                obstacleClassifier = this@BlindDetectorActivity
             )
-
             obstacleDetector.setup()
 
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 color = primary
             ) {
-
                 CameraPreview(
                     controller = LifecycleCameraController(applicationContext).apply {
                         setEnabledUseCases(CameraController.IMAGE_ANALYSIS)
@@ -92,26 +92,39 @@ class BlindDetectorActivity : ComponentActivity(),ObstacleClassifier{
         controller.bindToLifecycle(this as LifecycleOwner)
     }
 
+    override fun onInit(status: Int) {
+        if (status == TextToSpeech.SUCCESS) {
+            val result = textToSpeech?.setLanguage(Locale.US)
+            if (result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED) {
+                Log.e("TTS", "Language supported")
+            } else {
+                Log.e("TTS", "Language not supported")
+            }
+        } else {
+            Log.e("TTS", "Initialization failed")
+        }
+    }
+
+    override fun onDestroy() {
+        textToSpeech?.stop()
+        textToSpeech?.shutdown()
+        super.onDestroy()
+    }
+
+    fun speak(text: String) {
+        textToSpeech?.speak(text, TextToSpeech.QUEUE_ADD, null, null)
+    }
+
     override fun onDetect(objectDetectionResults: List<ObjectDetectionResult>, detectedScene: Bitmap) {
-
-        Log.i("obstacle detector", "detected objects: $objectDetectionResults")
-
         processingScope.launch {
-
-            val startTime = System.currentTimeMillis()
-
-            // TODO
-            //VOICE MODEL / TEXT TO SPEECH
-
-            val endTime = System.currentTimeMillis()
-
-            val duration = (endTime - startTime) / 1000.0
-
-            Log.d("bounding box drawing", "bounding box drawing took $duration seconds")
+            objectDetectionResults.forEach { result ->
+                val text = "You are approaching a ${result.className} by ${result.distance} meters."
+                speak(text)
+            }
         }
     }
 
     override fun onEmptyDetect() {
-        Log.i("obstacle detector", "no object has been detected yet")
+        Log.i("obstacle detector", "No object has been detected yet")
     }
 }
