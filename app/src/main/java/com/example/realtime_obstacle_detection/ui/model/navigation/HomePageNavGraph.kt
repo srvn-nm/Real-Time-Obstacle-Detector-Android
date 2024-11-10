@@ -6,6 +6,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.realtime_obstacle_detection.ui.model.screens.HomeScreens
+import com.example.realtime_obstacle_detection.ui.screens.about.AboutUsPageScreen
+import com.example.realtime_obstacle_detection.ui.screens.homepage.HomePageScreen
 
 
 @ExperimentalMaterialApi
@@ -17,22 +19,14 @@ fun HomePageNavGraph (navHostController: NavHostController){
         startDestination = HomeScreens.MainMenu.route
     ) {
         composable(route = HomeScreens.MainMenu.route) {
-            HomePageScreen()
+            HomePageScreen(navController =  navHostController)
         }
 
-        composable(route = HomeScreens.AboutMenu.route) {
+        composable(route = HomeScreens.AboutUs.route) {
             AboutUsPageScreen()
         }
 
     }
 }
 
-@Composable
-fun AboutUsPageScreen() {
-    TODO("Not yet implemented")
-}
 
-@Composable
-fun HomePageScreen() {
-    TODO("Not yet implemented")
-}

@@ -27,7 +27,7 @@ class ObstacleDetector(
     private val labelPath :String = "obstacle_detector_labels.txt",
     private val threadsCount :Int = 4,
     private val useNNAPI : Boolean= true,
-    private val confidenceThreshold : Float = 0.25F,
+    private val confidenceThreshold : Float = 0.5F,
     private val iouThreshold : Float = 0.4F
 ){
 
