@@ -5,24 +5,21 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import android.Manifest
-import android.content.Intent
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.example.realtime_obstacle_detection.ui.screens.homepage.HomePageSetUp
 
 class MainActivity : ComponentActivity(){
 
+    @OptIn(ExperimentalMaterialApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setupPermissions()
         setContent {
-            val context = LocalContext.current
-
-            context.startActivity(Intent(context, OnDetectionActivity::class.java))
+            HomePageSetUp()
         }
     }
-
-
 
     private fun setupPermissions() {
 

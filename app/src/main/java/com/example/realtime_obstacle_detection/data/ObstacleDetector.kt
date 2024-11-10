@@ -17,8 +17,8 @@ import android.graphics.Bitmap
 import android.util.Log
 import com.example.realtime_obstacle_detection.domain.ObjectDetectionResult
 import com.example.realtime_obstacle_detection.domain.ObstacleClassifier
-import com.example.realtime_obstacle_detection.utis.calculateDistance
-import com.example.realtime_obstacle_detection.utis.getFocalLength
+import com.example.realtime_obstacle_detection.utis.compose.boundingBox.calculateDistance
+import com.example.realtime_obstacle_detection.utis.camera.getFocalLength
 
 class ObstacleDetector(
     private val context: Context,

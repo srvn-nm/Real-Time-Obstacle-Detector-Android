@@ -1,4 +1,4 @@
-package com.example.realtime_obstacle_detection.utis
+package com.example.realtime_obstacle_detection.utis.camera
 
 import android.content.Context
 import android.hardware.camera2.CameraCharacteristics

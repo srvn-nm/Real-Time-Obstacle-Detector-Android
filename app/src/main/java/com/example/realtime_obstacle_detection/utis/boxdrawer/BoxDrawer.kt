@@ -26,6 +26,7 @@ fun drawBoundingBoxes(bitmap: Bitmap, boxes: List<ObjectDetectionResult>): Bitma
 
     for (box in boxes) {
 
+        Log.i("obstacle detector confidence rate", "distance ratio: ${box.confidenceRate}")
         Log.i("obstacle detector distance ratio", "distance ratio: ${box.distance}")
 
         val rect = RectF(
