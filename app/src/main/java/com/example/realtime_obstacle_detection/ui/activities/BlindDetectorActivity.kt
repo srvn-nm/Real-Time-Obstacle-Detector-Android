@@ -12,14 +12,9 @@ import androidx.camera.extensions.ExtensionsManager
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.CameraController
 import androidx.camera.view.LifecycleCameraController
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.Surface
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import com.example.realtime_obstacle_detection.data.ObstacleDetector
@@ -28,13 +23,12 @@ import com.example.realtime_obstacle_detection.domain.ObstacleClassifier
 import com.example.realtime_obstacle_detection.presentation.camera.CameraPreview
 import com.example.realtime_obstacle_detection.presentation.tensorflow.TensorFlowLiteFrameAnalyzer
 import com.example.realtime_obstacle_detection.ui.theme.primary
-import com.example.realtime_obstacle_detection.utis.boxdrawer.drawBoundingBoxes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class BlindDetectorActivity : ComponentActivity(),ObstacleClassifier{
-    private var image by mutableStateOf<Bitmap?>(null)
+
     private lateinit var obstacleDetector: ObstacleDetector
     private lateinit var extensionsManager: ExtensionsManager
     private lateinit var cameraProvider: ProcessCameraProvider
@@ -66,15 +60,7 @@ class BlindDetectorActivity : ComponentActivity(),ObstacleClassifier{
                     },
                     modifier = Modifier.fillMaxSize()
                 )
-
-                image?.let {
-                    Image(
-                        bitmap = it.asImageBitmap(),
-                        contentDescription = "Processed Image"
-                    )
-                }
             }
-
         }
     }
 
@@ -113,8 +99,9 @@ class BlindDetectorActivity : ComponentActivity(),ObstacleClassifier{
         processingScope.launch {
 
             val startTime = System.currentTimeMillis()
-            val updatedBitmap = drawBoundingBoxes(detectedScene, objectDetectionResults)
-            image = updatedBitmap
+
+            // TODO
+            //VOICE MODEL / TEXT TO SPEECH
 
             val endTime = System.currentTimeMillis()
 
@@ -126,6 +113,5 @@ class BlindDetectorActivity : ComponentActivity(),ObstacleClassifier{
 
     override fun onEmptyDetect() {
         Log.i("obstacle detector", "no object has been detected yet")
-        image = null
     }
 }
