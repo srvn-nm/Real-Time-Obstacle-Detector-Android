@@ -1,5 +1,7 @@
 package com.example.realtime_obstacle_detection.utis.compose.boundingBox
 
+import android.util.Log
+
 // Real-world sizes in meters for each object type, converted to millimeters
 private val REAL_WORLD_SIZES_MM = mapOf(
     "bicycle" to 600F,
@@ -8,7 +10,7 @@ private val REAL_WORLD_SIZES_MM = mapOf(
     "dog" to 500F,
     "electric pole" to 300F,
     "motorcycle" to 800F,
-    "person" to 500F,
+    "person" to 1500F,
     "traffic sign" to 700F,
     "tree" to 2000F,
     "uncovered manhole" to 700F
@@ -31,5 +33,6 @@ fun calculateDistance(className: String, objectHeightInPixels: Float, focalLengt
     if (focalLengthInMM != null &&  sensorHeightInMM != null)
        return (focalLengthInMM * realHeightOfObjectInMM * imageHeightInPixels) / (objectHeightInPixels * sensorHeightInMM)
 
+    Log.i("obstacle detector distance states rate", "focalLengthInMM : $focalLengthInMM imageHeightInPixels : $imageHeightInPixels objectHeightInPixels : $objectHeightInPixels sensorHeightInMM : $sensorHeightInMM")
     return null
 }
