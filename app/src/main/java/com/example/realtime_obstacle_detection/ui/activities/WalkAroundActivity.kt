@@ -4,10 +4,13 @@ import android.os.Bundle
 import android.os.Vibrator
 import android.os.Build
 import android.os.VibrationEffect
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
+import androidx.camera.extensions.ExtensionMode
+import androidx.camera.extensions.ExtensionsManager
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.CameraController
 import androidx.camera.view.LifecycleCameraController
@@ -22,17 +25,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.LifecycleOwner
 import com.example.realtime_obstacle_detection.data.ObstacleDetector
 import com.example.realtime_obstacle_detection.domain.ObjectDetectionResult
 import com.example.realtime_obstacle_detection.domain.ObstacleClassifier
 import com.example.realtime_obstacle_detection.presentation.camera.CameraPreview
 import com.example.realtime_obstacle_detection.presentation.tensorflow.TensorFlowLiteFrameAnalyzer
+import com.example.realtime_obstacle_detection.ui.activities.BlindDetectorActivity
+import com.example.realtime_obstacle_detection.utis.vibration.vibratePhone
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class WalkAroundActivity : ComponentActivity(), ObstacleClassifier {
     private var modelMessage by mutableStateOf<String?>(null)
+    private lateinit var extensionsManager: ExtensionsManager
     private var showAlert by mutableStateOf(false)
     private var alertColor by mutableStateOf(Color.Yellow)
     private var alertText by mutableStateOf("CAUTION")
@@ -47,11 +54,17 @@ class WalkAroundActivity : ComponentActivity(), ObstacleClassifier {
         setContent {
             val context = LocalContext.current
 
+            obstacleDetector = ObstacleDetector(
+                context = baseContext,
+                obstacleClassifier = this@WalkAroundActivity
+            )
+            obstacleDetector.setup()
+
             Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
                 CameraPreview(
                     controller = LifecycleCameraController(context).apply {
                         setEnabledUseCases(CameraController.IMAGE_ANALYSIS)
-                        bindToLifecycle(this@WalkAroundActivity)
+                        bindCameraUseCases(this)
                     },
                     modifier = Modifier.fillMaxSize()
                 )
@@ -89,21 +102,34 @@ class WalkAroundActivity : ComponentActivity(), ObstacleClassifier {
         }
     }
 
+    private fun bindCameraUseCases(controller: LifecycleCameraController) {
+        controller.setImageAnalysisAnalyzer(
+            ContextCompat.getMainExecutor(applicationContext),
+            TensorFlowLiteFrameAnalyzer(
+                obstacleDetector = obstacleDetector,
+            )
+        )
+        controller.bindToLifecycle(this as LifecycleOwner)
+    }
+
     private fun setupCameraXExtensions() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener({
             cameraProvider = cameraProviderFuture.get()
-            bindCameraUseCases(LifecycleCameraController(applicationContext))
+            val extensionsManagerFuture = ExtensionsManager.getInstanceAsync(this, cameraProvider)
+            extensionsManagerFuture.addListener({
+                extensionsManager = extensionsManagerFuture.get()
+                val selector = CameraSelector.DEFAULT_BACK_CAMERA
+                if (extensionsManager.isExtensionAvailable(selector, ExtensionMode.HDR)) {
+                    val hdrCameraSelector = extensionsManager.getExtensionEnabledCameraSelector(selector, ExtensionMode.HDR)
+                    bindCameraUseCases(LifecycleCameraController(applicationContext).apply {
+                        cameraSelector = hdrCameraSelector
+                    })
+                }
+            }, ContextCompat.getMainExecutor(this))
         }, ContextCompat.getMainExecutor(this))
     }
 
-    private fun bindCameraUseCases(controller: LifecycleCameraController) {
-        controller.setImageAnalysisAnalyzer(
-            ContextCompat.getMainExecutor(applicationContext),
-            TensorFlowLiteFrameAnalyzer(obstacleDetector)
-        )
-        controller.bindToLifecycle(this)
-    }
 
     override fun onDetect(objectDetectionResults: List<ObjectDetectionResult>, detectedScene: Bitmap) {
         val closestObject = objectDetectionResults.minByOrNull { it.distance ?: Float.MAX_VALUE }
@@ -118,25 +144,16 @@ class WalkAroundActivity : ComponentActivity(), ObstacleClassifier {
                 alertColor = if (warningLevel == "DANGER") Color.Red else Color.Yellow
                 showAlert = true
 
-                // Trigger vibration
-                vibratePhone(warningLevel == "DANGER")
+                vibratePhone(
+                    context = this@WalkAroundActivity
+                )
             }
         }
     }
 
-    private fun vibratePhone(isDanger: Boolean) {
-        val pattern = if (isDanger) longArrayOf(0, 500, 100, 500) else longArrayOf(0, 300)
-        val vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val effect = VibrationEffect.createWaveform(pattern, -1)
-            vibrator.vibrate(effect)
-        } else {
-            vibrator.vibrate(pattern, -1)
-        }
-    }
 
     override fun onEmptyDetect() {
-        modelMessage = "No object has been detected yet."
-        showAlert = false
+        Log.i("obstacle detector", "No object has been detected yet")
+        //showAlert = false
     }
 }
