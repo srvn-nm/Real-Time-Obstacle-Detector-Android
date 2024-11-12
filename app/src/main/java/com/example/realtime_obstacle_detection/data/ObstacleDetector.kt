@@ -24,9 +24,9 @@ import com.example.realtime_obstacle_detection.utis.camera.getFocalLength
 class ObstacleDetector(
     private val context: Context,
     private val obstacleClassifier: ObstacleClassifier,
-    private val modelPath :String = "obstacle_detector_float16.tflite",
-    private val labelPath :String = "obstacle_detector_labels.txt",
-    private val threadsCount :Int = 4,
+    private val modelPath :String = "14_obstacle_32bit.tflite",
+    private val labelPath :String = "14_obstacles_labels.txt",
+    private val threadsCount :Int = 5,
     private val useNNAPI : Boolean= true,
     private val confidenceThreshold : Float = 0.5F,
     private val iouThreshold : Float = 0.4F
