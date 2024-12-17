@@ -18,7 +18,7 @@ import android.util.Log
 import com.example.realtime_obstacle_detection.domain.ObjectDetectionResult
 import com.example.realtime_obstacle_detection.domain.ObstacleClassifier
 import com.example.realtime_obstacle_detection.utis.camera.getCameraSensorInfo
-import com.example.realtime_obstacle_detection.utis.compose.boundingBox.calculateDistance
+import com.example.realtime_obstacle_detection.utis.distance.calculateDistance
 import com.example.realtime_obstacle_detection.utis.camera.getFocalLength
 import org.tensorflow.lite.gpu.GpuDelegate
 import org.tensorflow.lite.gpu.CompatibilityList
@@ -31,8 +31,8 @@ class ObstacleDetector(
     private val threadsCount :Int = 5,
     private val useGPU : Boolean= true,
     private val useNNAPI : Boolean= true,
-    private val confidenceThreshold : Float = 0.5F,
-    private val iouThreshold : Float = 0.4F
+    private val confidenceThreshold : Float = 0.35F,
+    private val iouThreshold : Float = 0.3F
 ){
 
     private var interpreter: Interpreter? = null
