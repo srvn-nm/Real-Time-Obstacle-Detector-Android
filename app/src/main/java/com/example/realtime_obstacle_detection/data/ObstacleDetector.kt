@@ -20,6 +20,8 @@ import com.example.realtime_obstacle_detection.domain.ObstacleClassifier
 import com.example.realtime_obstacle_detection.utis.camera.getCameraSensorInfo
 import com.example.realtime_obstacle_detection.utis.compose.boundingBox.calculateDistance
 import com.example.realtime_obstacle_detection.utis.camera.getFocalLength
+import org.tensorflow.lite.gpu.GpuDelegate
+import org.tensorflow.lite.gpu.CompatibilityList
 
 class ObstacleDetector(
     private val context: Context,
@@ -27,6 +29,7 @@ class ObstacleDetector(
     private val modelPath :String = "14_obstacle_32bit.tflite",
     private val labelPath :String = "14_obstacles_labels.txt",
     private val threadsCount :Int = 5,
+    private val useGPU : Boolean= true,
     private val useNNAPI : Boolean= true,
     private val confidenceThreshold : Float = 0.5F,
     private val iouThreshold : Float = 0.4F
@@ -45,17 +48,33 @@ class ObstacleDetector(
 
     fun setup() {
 
+        Log.d("model setup and configuration", "starting the process ...")
+
         focalLength = getFocalLength(context)
         sensorHeight = getCameraSensorInfo(context)?.height
+        Log.d("model setup and configuration", "camera information: focalLength,sensorHeight -> $focalLength,$sensorHeight")
 
         imageProcessor = ImageProcessor.Builder()
             .add(NormalizeOp( 0f, 255f))
             .add(CastOp(DataType.FLOAT32))
             .build()
 
+        Log.d("model setup and configuration", "image processor ...")
+
+
         val options = Interpreter.Options()
+        val compatList = CompatibilityList()
+
+        if(compatList.isDelegateSupportedOnThisDevice && useGPU){
+            Log.d("model setup and configuration", "GPU is added")
+            val delegateOptions = compatList.bestOptionsForThisDevice
+            options.addDelegate(GpuDelegate(delegateOptions))
+        }
+
         options.numThreads = threadsCount
         options.useNNAPI = useNNAPI
+
+        Log.d("model setup and configuration", "GPU, threadsCount and NNAPI CONFIGS are added")
 
         val model = FileUtil.loadMappedFile(context, modelPath)
 
@@ -69,8 +88,11 @@ class ObstacleDetector(
         channelsCount = outputShape[1]
         elementsCount = outputShape[2]
 
+        Log.d("model setup and configuration", "interpreter and its configurations ...")
+
         try {
             labelReader()
+            Log.d("model setup and configuration", "labels are added")
         } catch (e: IOException) {
             e.printStackTrace()
         }
