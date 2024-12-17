@@ -1,4 +1,4 @@
-package com.example.realtime_obstacle_detection.utis.compose.boundingBox
+package com.example.realtime_obstacle_detection.utis.distance
 
 import android.util.Log
 
@@ -10,7 +10,7 @@ private val REAL_WORLD_SIZES_MM = mapOf(
     "dog" to 500F,
     "electric pole" to 300F,
     "motorcycle" to 800F,
-    "person" to 1500F,
+    "person" to 1600F,
     "traffic sign" to 700F,
     "tree" to 2000F,
     "uncovered manhole" to 700F

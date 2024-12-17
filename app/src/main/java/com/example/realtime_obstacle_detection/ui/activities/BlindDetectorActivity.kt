@@ -118,7 +118,7 @@ class BlindDetectorActivity : ComponentActivity(), ObstacleClassifier, TextToSpe
     override fun onDetect(objectDetectionResults: List<ObjectDetectionResult>, detectedScene: Bitmap) {
         processingScope.launch {
             objectDetectionResults.forEach { result ->
-                val text = "You are approaching a ${result.className} by ${result.distance} meters."
+                val text = "You are approaching to ${result.className}"
                 speak(text)
             }
         }

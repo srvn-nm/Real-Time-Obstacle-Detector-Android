@@ -21,8 +21,6 @@ data class ObjectDetectionResult(
     val y1: Float,
     val x2: Float,
     val y2: Float,
-//    val cx: Float,
-//    val cy: Float,
     val width: Float,
     val height: Float,
     val confidenceRate: Float,
