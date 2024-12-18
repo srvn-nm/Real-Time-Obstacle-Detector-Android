@@ -1,7 +1,5 @@
 package com.example.realtime_obstacle_detection.ui.screens.homepage
 
-
-
 import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -64,7 +62,6 @@ fun HomePageScreen(navController: NavController){
                         navController.navigate("about_us")
                     }
                 }
-
             }
         }
     }

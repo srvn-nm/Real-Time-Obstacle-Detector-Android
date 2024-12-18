@@ -3,6 +3,6 @@ package com.example.realtime_obstacle_detection.ui.theme
 import androidx.compose.ui.graphics.Color
 
 
-val primary = Color(0xFFDC5F00)
-val secondary = Color(0xFF373A40)
+val primary = Color(0xFFDFF2EB)
+val secondary = Color(0xFF4A628A)
 val tertiary = Color(0xFF686D76)

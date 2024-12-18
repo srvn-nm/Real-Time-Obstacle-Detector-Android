@@ -29,10 +29,10 @@ fun HomePageCategoriesCardView(title: String, image: ImageVector, modifier: Modi
 
         Card(
             shape = RoundedCornerShape(50.dp),
-            elevation = 5.dp,
+            elevation = 10.dp,
             modifier = Modifier
                 .size(200.dp)
-                .padding(10.dp)
+                .padding(20.dp)
                 .clickable {
                     onClickEvent()
                 }
