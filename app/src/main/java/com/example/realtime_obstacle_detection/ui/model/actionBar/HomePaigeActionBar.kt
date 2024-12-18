@@ -1,9 +1,6 @@
 package com.example.realtime_obstacle_detection.ui.model.actionBar
 
-
-import androidx.compose.material.ScaffoldState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.Text
@@ -14,8 +11,6 @@ import androidx.compose.ui.unit.dp
 import com.example.realtime_obstacle_detection.ui.theme.primary
 import com.example.realtime_obstacle_detection.ui.theme.secondary
 
-
-import kotlinx.coroutines.CoroutineScope
 
 @Composable
 fun HomePageActionBar(

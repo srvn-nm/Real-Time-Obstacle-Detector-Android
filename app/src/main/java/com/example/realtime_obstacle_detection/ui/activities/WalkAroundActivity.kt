@@ -1,14 +1,10 @@
 package com.example.realtime_obstacle_detection.ui.activities
 import android.graphics.Bitmap
 import android.os.Bundle
-import android.os.Vibrator
-import android.os.Build
-import android.os.VibrationEffect
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageAnalysis
 import androidx.camera.extensions.ExtensionMode
 import androidx.camera.extensions.ExtensionsManager
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -31,11 +27,9 @@ import com.example.realtime_obstacle_detection.domain.ObjectDetectionResult
 import com.example.realtime_obstacle_detection.domain.ObstacleClassifier
 import com.example.realtime_obstacle_detection.presentation.camera.CameraPreview
 import com.example.realtime_obstacle_detection.presentation.tensorflow.TensorFlowLiteFrameAnalyzer
-import com.example.realtime_obstacle_detection.ui.activities.BlindDetectorActivity
 import com.example.realtime_obstacle_detection.utis.vibration.vibratePhone
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 class WalkAroundActivity : ComponentActivity(), ObstacleClassifier {
     private var modelMessage by mutableStateOf<String?>(null)
