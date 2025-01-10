@@ -83,7 +83,7 @@ class WalkAroundActivity : ComponentActivity(), ObstacleClassifier {
                             Text(
                                 text = modelMessage ?: "",
                                 style = MaterialTheme.typography.subtitle1,
-                                color = Color.White,
+                                color = Color.Black,
                                 modifier = Modifier.padding(16.dp)
                             )
                             Button(onClick = { showAlert = false }, colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black)) {

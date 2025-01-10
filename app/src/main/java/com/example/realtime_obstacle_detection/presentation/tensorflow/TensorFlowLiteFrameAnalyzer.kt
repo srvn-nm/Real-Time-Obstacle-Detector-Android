@@ -9,8 +9,12 @@ class TensorFlowLiteFrameAnalyzer (
     private val obstacleDetector: ObstacleDetector,
 ): ImageAnalysis.Analyzer {
 
+    private var frameSkipCounter = 0
 
     override fun analyze(image: ImageProxy) {
+
+        if(frameSkipCounter % 6 == 0) {
+            val rotationDegrees = image.imageInfo.rotationDegrees
 
             val startTime = System.currentTimeMillis()
             val bitmap = image.toBitmap()
@@ -23,6 +27,10 @@ class TensorFlowLiteFrameAnalyzer (
 
             obstacleDetector.detect(image = bitmap)
 
-            image.close()
+        }
+        frameSkipCounter++
+
+        image.close()
+
     }
 }
