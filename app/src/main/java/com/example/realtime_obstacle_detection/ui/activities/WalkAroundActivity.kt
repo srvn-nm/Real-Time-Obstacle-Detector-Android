@@ -77,7 +77,7 @@ class WalkAroundActivity : ComponentActivity(), ObstacleClassifier {
                             Text(
                                 text = alertText,
                                 style = MaterialTheme.typography.h4,
-                                color = Color.White,
+                                color = Color.Black,
                                 modifier = Modifier.padding(16.dp)
                             )
                             Text(
