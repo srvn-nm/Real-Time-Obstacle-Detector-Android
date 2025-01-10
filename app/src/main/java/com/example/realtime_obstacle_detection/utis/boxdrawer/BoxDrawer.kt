@@ -36,7 +36,7 @@ fun drawBoundingBoxes(bitmap: Bitmap, boxes: List<ObjectDetectionResult>): Bitma
             box.y2 * mutableBitmap.height
         )
         canvas.drawRect(rect, paint)
-        canvas.drawText("${box.className} ${box.distance}cm", rect.left, rect.bottom, textPaint)
+        canvas.drawText("${box.className}", rect.left, rect.bottom, textPaint)
 
         saveBitmapAsPNG(mutableBitmap, box.className)
     }

@@ -26,8 +26,8 @@ import org.tensorflow.lite.gpu.CompatibilityList
 class ObstacleDetector(
     private val context: Context,
     private val obstacleClassifier: ObstacleClassifier,
-    private val modelPath :String = "14_obstacle_16bit.tflite",
-    private val labelPath :String = "14_obstacles_labels.txt",
+    private val modelPath :String = "best_float32.tflite",
+    private val labelPath :String = "best_labels.txt",
     private val threadsCount :Int = 3,
 //    private val useGPU : Boolean= true,
     private val useNNAPI : Boolean= true,
