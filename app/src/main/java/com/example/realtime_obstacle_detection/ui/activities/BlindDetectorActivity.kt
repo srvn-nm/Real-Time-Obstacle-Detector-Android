@@ -39,8 +39,13 @@ class BlindDetectorActivity : ComponentActivity(), ObstacleClassifier, TextToSpe
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val startTime = System.currentTimeMillis()
         textToSpeech = TextToSpeech(this, this)
         setupCameraXExtensions()
+        val endTime = System.currentTimeMillis()
+        val duration = (endTime - startTime) / 1000.0
+        Log.d("processing time", "HDR Preprocessing and textToSpeech initialization took $duration seconds")
 
         setContent {
             obstacleDetector = ObstacleDetector(
@@ -96,12 +101,12 @@ class BlindDetectorActivity : ComponentActivity(), ObstacleClassifier, TextToSpe
         if (status == TextToSpeech.SUCCESS) {
             val result = textToSpeech?.setLanguage(Locale.US)
             if (result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED) {
-                Log.e("TTS", "Language supported")
+                Log.e("TTS", "US Language supported")
             } else {
-                Log.e("TTS", "Language not supported")
+                Log.e("TTS", "US Language not supported")
             }
         } else {
-            Log.e("TTS", "Initialization failed")
+            Log.e("TTS", "Initialization failed due unknown reason")
         }
     }
 

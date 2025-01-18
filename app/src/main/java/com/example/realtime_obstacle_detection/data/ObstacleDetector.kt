@@ -20,7 +20,6 @@ import com.example.realtime_obstacle_detection.domain.ObstacleClassifier
 import com.example.realtime_obstacle_detection.utis.camera.getCameraSensorInfo
 import com.example.realtime_obstacle_detection.utis.distance.calculateDistance
 import com.example.realtime_obstacle_detection.utis.camera.getFocalLength
-//import org.tensorflow.lite.gpu.GpuDelegate
 import org.tensorflow.lite.gpu.CompatibilityList
 
 class ObstacleDetector(
@@ -29,7 +28,6 @@ class ObstacleDetector(
     private val modelPath :String = "best_float32.tflite",
     private val labelPath :String = "best_labels.txt",
     private val threadsCount :Int = 3,
-//    private val useGPU : Boolean= true,
     private val useNNAPI : Boolean= true,
     private val confidenceThreshold : Float = 0.35F,
     private val iouThreshold : Float = 0.3F
@@ -63,13 +61,6 @@ class ObstacleDetector(
 
 
         val options = Interpreter.Options()
-        val compatList = CompatibilityList()
-
-//        if(compatList.isDelegateSupportedOnThisDevice && useGPU){
-//            Log.d("model setup and configuration", "GPU is added")
-//            val delegateOptions = compatList.bestOptionsForThisDevice
-//            options.addDelegate(GpuDelegate(delegateOptions))
-//        }
 
         options.numThreads = threadsCount
         options.useNNAPI = useNNAPI
