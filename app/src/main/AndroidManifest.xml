@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools" >
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.CAMERA" />
 
@@ -25,7 +25,12 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Realtime_Obstacle_Detection"
-        tools:targetApi="31" >
+        tools:targetApi="31">
+        <activity
+            android:name=".ui.activities.SettingsActivity"
+            android:exported="false"
+            android:label="@string/title_activity_settings"
+            android:theme="@style/Theme.Realtime_Obstacle_Detection" />
         <activity
             android:name=".ui.activities.OnDetectionActivity"
             android:exported="false"
@@ -36,7 +41,6 @@
             android:exported="false"
             android:label="@string/title_activity_blind_detector"
             android:theme="@style/Theme.Realtime_Obstacle_Detection" />
-
         <activity
             android:name=".ui.activities.WalkAroundActivity"
             android:exported="false"
@@ -45,7 +49,7 @@
         <activity
             android:name=".ui.activities.MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.Realtime_Obstacle_Detection" >
+            android:theme="@style/Theme.Realtime_Obstacle_Detection">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

@@ -76,4 +76,6 @@ dependencies {
     implementation(libs.tensorflow.lite.gpu)
 
     implementation(libs.tensorflow.lite.gpu.api)
+
+    implementation "androidx.datastore:datastore-preferences:1.1.2"
 }

@@ -4,4 +4,5 @@
     <string name="title_activity_about_us">AboutUsActivity</string>
     <string name="title_activity_walk_around">WalkAroundActivity</string>
     <string name="title_activity_on_detection">OnDetectionActivity</string>
+    <string name="title_activity_settings">SettingsActivity</string>
 </resources>
