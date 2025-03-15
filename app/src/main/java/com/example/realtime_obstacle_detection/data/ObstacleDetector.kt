@@ -20,7 +20,7 @@ import com.example.realtime_obstacle_detection.domain.ObstacleClassifier
 import com.example.realtime_obstacle_detection.utis.camera.getCameraSensorInfo
 import com.example.realtime_obstacle_detection.utis.distance.calculateDistance
 import com.example.realtime_obstacle_detection.utis.camera.getFocalLength
-import org.tensorflow.lite.gpu.CompatibilityList
+import androidx.core.graphics.scale
 
 class ObstacleDetector(
     private val context: Context,
@@ -48,10 +48,12 @@ class ObstacleDetector(
 
         Log.d("model setup and configuration", "starting the process ...")
 
+        // Camera parameters setup
         focalLength = getFocalLength(context)
         sensorHeight = getCameraSensorInfo(context)?.height
         Log.d("model setup and configuration", "camera information: focalLength,sensorHeight -> $focalLength,$sensorHeight")
 
+        // Image processing pipeline
         imageProcessor = ImageProcessor.Builder()
             .add(NormalizeOp( 0f, 255f))
             .add(CastOp(DataType.FLOAT32))
@@ -60,6 +62,7 @@ class ObstacleDetector(
         Log.d("model setup and configuration", "image processor ...")
 
 
+        // Interpreter configuration
         val options = Interpreter.Options()
 
         options.numThreads = threadsCount
@@ -67,10 +70,12 @@ class ObstacleDetector(
 
         Log.d("model setup and configuration", "GPU, threadsCount and NNAPI CONFIGS are added")
 
+        // Model initialization
         val model = FileUtil.loadMappedFile(context, modelPath)
 
         interpreter = Interpreter(model, options)
 
+        // Tensor dimensions
         val inputShape = interpreter?.getInputTensor(0)?.shape() ?: return
         val outputShape = interpreter?.getOutputTensor(0)?.shape() ?: return
 
@@ -112,8 +117,7 @@ class ObstacleDetector(
         if (tensorWidth == 0 || tensorHeight == 0 || channelsCount == 0 || elementsCount == 0) return
 
         //we should preprocess the bitmap before detection
-        val resizedBitmap = Bitmap
-            .createScaledBitmap(image, tensorWidth, tensorHeight, false)
+        val resizedBitmap = image.scale(tensorWidth, tensorHeight, false)
 
 
         val tensorImage = TensorImage(DataType.FLOAT32)
@@ -160,7 +164,7 @@ class ObstacleDetector(
 
     private fun bestBox(array: FloatArray) : List<ObjectDetectionResult>? {
 
-        var startTime = System.currentTimeMillis()
+        val startTime = System.currentTimeMillis()
         val objectDetectionResults = mutableListOf<ObjectDetectionResult>()
 
         for (classIndex in 0 until elementsCount) {
@@ -221,9 +225,9 @@ class ObstacleDetector(
             }
         }
 
-        var endTime = System.currentTimeMillis()
+        val endTime = System.currentTimeMillis()
 
-        var duration = (endTime - startTime) / 1000.0
+        val duration = (endTime - startTime) / 1000.0
         Log.d("processing time", "finding the bounding box and saving operations took $duration seconds")
 
         if (objectDetectionResults.isEmpty())

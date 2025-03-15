@@ -7,11 +7,27 @@ import com.example.realtime_obstacle_detection.data.ObstacleDetector
 
 class TensorFlowLiteFrameAnalyzer (
     private val obstacleDetector: ObstacleDetector,
+    private val onFpsCalculated: ((Int) -> Unit)? = null
 ): ImageAnalysis.Analyzer {
 
     private var frameSkipCounter = 0
+    private var lastTimestamp = 0L
+    private var frameCount = 0
 
     override fun analyze(image: ImageProxy) {
+        val currentTimestamp = System.currentTimeMillis()
+        if (lastTimestamp == 0L) {
+            lastTimestamp = currentTimestamp
+        }
+        frameCount++
+        // Update FPS every second.
+        if (currentTimestamp - lastTimestamp >= 1000) {
+            val fps = frameCount
+            onFpsCalculated?.invoke(fps)
+            Log.d("FPS", "FPS: $fps")
+            frameCount = 0
+            lastTimestamp = currentTimestamp
+        }
 
         if(frameSkipCounter % 6 == 0) {
             val rotationDegrees = image.imageInfo.rotationDegrees
