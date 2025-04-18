@@ -22,6 +22,21 @@ import com.example.realtime_obstacle_detection.utis.distance.calculateDistance
 import com.example.realtime_obstacle_detection.utis.camera.getFocalLength
 import androidx.core.graphics.scale
 
+/**
+ * ObstacleDetector is responsible for performing object detection using a pre-trained YOLO model.
+ * It handles model loading, preprocessing input images, running inference, and post-processing
+ * detection results including confidence filtering, bounding box extraction, distance calculation,
+ * and non-maximum suppression(NMS).
+ *
+ * @param context The Android context used for accessing assets and system information.
+ * @param obstacleClassifier A callback interface to deliver detection results or handle empty results.
+ * @param modelPath Path to the TFLite model file within the assets directory.
+ * @param labelPath Path to the label file listing object class names.
+ * @param threadsCount Number of threads used for inference.
+ * @param useNNAPI Flag to enable NNAPI acceleration (if supported by edge device).
+ * @param confidenceThreshold Minimum confidence score to keep a detection result.
+ * @param iouThreshold Threshold for Intersection over Union (IoU) used in NMS to filter overlapping boxes.
+ */
 class ObstacleDetector(
     private val context: Context,
     private val obstacleClassifier: ObstacleClassifier,
@@ -44,6 +59,16 @@ class ObstacleDetector(
     private var channelsCount = 0
     private var elementsCount = 0
 
+    /**
+     * Initializes the object detection model by:
+     * - Reading camera parameters (focal length and sensor height),
+     * - Creating an image preprocessing pipeline (normalization and casting),
+     * - Configuring the TFLite interpreter with thread count and NNAPI,
+     * - Loading the model and extracting tensor dimensions,
+     * - Loading class labels from asset files.
+     *
+     * Note: This function should be called once before any detection is performed.
+     */
     fun setup() {
 
         Log.d("model setup and configuration", "starting the process ...")
@@ -94,6 +119,11 @@ class ObstacleDetector(
         }
     }
 
+    /**
+     * Loads class labels from the label file in the assets folder.
+     * Each line in the file represents a class name used in the model output.
+     * Populates the `labels` list used for assigning names to detection results.
+     */
     private fun labelReader(){
         val inputStream: InputStream = context.assets.open(labelPath)
         val reader = BufferedReader(InputStreamReader(inputStream))
@@ -107,6 +137,19 @@ class ObstacleDetector(
         reader.close()
         inputStream.close()
     }
+
+    /**
+     * Runs object detection on the given bitmap image.
+     * Steps:
+     * - Resizes and preprocesses the input image,
+     * - Runs the image through the model using the interpreter,
+     * - Extracts the best bounding boxes using the model output,
+     * - Passes the result to the `ObstacleClassifier` callback.
+     *
+     * Logs processing time for each phase for performance tracking.
+     *
+     * @param image The bitmap image to analyze.
+     */
 
     fun detect(image: Bitmap){
 
@@ -162,6 +205,18 @@ class ObstacleDetector(
 
     }
 
+    /**
+     * Processes raw model output into a list of high-confidence detection results.
+     * Steps:
+     * - Iterates over each predicted bounding box and finds the class with the highest confidence,
+     * - Applies the confidence threshold filter,
+     * - Converts center-based bounding boxes to corner-based format (x1, y1, x2, y2),
+     * - Calculates the physical distance to the object based on camera parameters,
+     * - Filters out invalid coordinates and returns the final list after applying NMS.
+     *
+     * @param array The flattened float array output of the TFLite model.
+     * @return A list of `ObjectDetectionResult`, or null if no valid detections.
+     */
     private fun bestBox(array: FloatArray) : List<ObjectDetectionResult>? {
 
         val startTime = System.currentTimeMillis()
@@ -236,6 +291,13 @@ class ObstacleDetector(
         return applyNMS(objectDetectionResults)
     }
 
+    /**
+     * Applies Non-Maximum Suppression (NMS) to eliminate overlapping bounding boxes.
+     * Retains only the highest-confidence box when multiple detections overlap significantly.
+     *
+     * @param boxes List of all raw detection results.
+     * @return A filtered list with non-overlapping detection boxes.
+     */
     private fun applyNMS(boxes: List<ObjectDetectionResult>) : MutableList<ObjectDetectionResult> {
 
         val selectedBoxes = mutableListOf<ObjectDetectionResult>()
@@ -262,6 +324,14 @@ class ObstacleDetector(
         return selectedBoxes
     }
 
+    /**
+     * Calculates the Intersection over Union (IoU) score between two bounding boxes.
+     * Used to determine overlap for NMS.
+     *
+     * @param box1 First bounding box.
+     * @param box2 Second bounding box.
+     * @return IoU value between 0.0 and 1.0.
+     */
     private fun calculateIoU(box1: ObjectDetectionResult, box2: ObjectDetectionResult): Float {
         val x1 = maxOf(box1.x1, box2.x1)
         val y1 = maxOf(box1.y1, box2.y1)
