@@ -1,77 +1,104 @@
 package com.example.realtime_obstacle_detection.ui.screens.initialConfigurations
 
+/**
+ * Enum class representing different versions of YOLO object detection models
+ * used within the application.
+ *
+ * Each entry corresponds to a unique model variant with the following properties:
+ * @param displayName A user-friendly name for displaying in the UI or logs.
+ * @param modelFileName The name of the TFLite model file used for inference.
+ * @param labelFileName The associated label file containing object class names.
+ *
+ * Groupings:
+ * - YOLOv8 / YOLOv12: Refers to different versions of the YOLO model architecture.
+ * - 15 vs. 18 Obstacles: Refers to the number of object classes in the detection dataset.
+ * - FP16, FP32, INT8, Integer Quant: Represents different quantization and precision formats
+ *   to balance model size, speed, and accuracy.
+ *
+ * The `DEFAULT` model is set to `YOLO8_18_OBSTACLE_FP32BIT`, but can be customized as needed.
+ */
 enum class Models(
     val displayName: String,
     val modelFileName: String,
     val labelFileName: String
 ) {
-    OBSTACLE_16BIT(
-        "14 Obstacle 16-bit",
-        "14_obstacle_16bit.tflite",
-        "14_obstacles_labels.txt"
+    //YoloV8 - 18 Obstacles ------------------------------------------------------------------------
+    YOLO8_18_OBSTACLE_FP16BIT(
+        "18 Obstacles YOLOv FP16",
+        "18Obstacles_yolov8_float16.tflite",
+        "18Obstacles_labels.txt"
     ),
-    OBSTACLE_32BIT(
-        "14 Obstacle 32-bit",
-        "14_obstacle_32bit.tflite",
-        "14_obstacles_labels.txt"
+    YOLO8_18_OBSTACLE_FP32BIT(
+        "18 Obstacles YOLOv FP32",
+        "18Obstacles_yolov8_float32.tflite",
+        "18Obstacles_labels.txt"
     ),
-    OBSTACLE_BEST_INT8(
-        "14 Obstacle Best INT8",
-        "14_obstacle_best_int8.tflite",
-        "14_obstacles_labels.txt"
+    YOLO8_18_OBSTACLE_FULL_INTEGER(
+        "18 Obstacles YOLOv8 Full Integer Quant",
+        "18Obstacles_yolov8_full_integer_quant.tflite",
+        "18Obstacles_labels.txt"
     ),
-    OBJECT_16BIT(
-        "20 Object 16-bit",
-        "20_object_16bit.tflite",
-        "20_object_labels.txt"
+    YOLO8_18_OBSTACLE_INT8(
+        "18 Obstacles YOLOv8 INT8",
+        "18Obstacles_yolov8_int8.tflite",
+        "18Obstacles_labels.txt"
     ),
-    OBJECT_32BIT(
-        "20 Object 32-bit",
-        "20_object_32bit.tflite",
-        "20_object_labels.txt"
+    YOLO8_18_OBSTACLE_INTEGER_QUANT(
+        "18 Obstacles YOLOv8 Integer Quant",
+        "18Obstacles_yolov8_integer_quant.tflite",
+        "18Obstacles_labels.txt"
     ),
+
+    //YoloV12 - 18 Obstacles -----------------------------------------------------------------------
+    YOLO12_18_OBSTACLE_FP16BIT(
+        "18 Obstacles YOLOv12 FP16",
+        "18Obstacles_yolov12_float16.tflite",
+        "18Obstacles_labels.txt"
+    ),
+    YOLO12_18_OBSTACLE_FP32BIT(
+        "18 Obstacles YOLOv12 FP32",
+        "18Obstacles_yolov12_float32.tflite",
+        "18Obstacles_labels.txt"
+    ),
+    
+    //15 Obstacles - YoloV8  -----------------------------------------------------------------------
+    
     BEST_FLOAT16(
         "Best Float16",
-        "best_float16.tflite",
-        "best_labels.txt"
+        "15Obstacles_yolov8_float16.tflite",
+        "15Obstacles_labels.txt"
     ),
     BEST_FLOAT32(
         "Best Float32",
-        "best_float32.tflite",
-        "best_labels.txt"
+        "15Obstacles_yolov8_float32.tflite",
+        "15Obstacles_labels.txt"
     ),
     BEST_FULL_INTEGER(
         "Best Full Integer Quant",
-        "best_full_integer_quant.tflite",
-        "best_labels.txt"
+        "15Obstacles_yolov8_full_integer_quant.tflite",
+        "15Obstacles_labels.txt"
     ),
     BEST_INT8(
         "Best INT8",
-        "best_int8.tflite",
-        "best_labels.txt"
+        "15Obstacles_yolov8_int8.tflite",
+        "15Obstacles_labels.txt"
     ),
     BEST_INTEGER_QUANT(
         "Best Integer Quant",
-        "best_integer_quant.tflite",
-        "best_labels.txt"
+        "15Obstacles_yolov8_integer_quant.tflite",
+        "15Obstacles_labels.txt"
     ),
-    OBSTACLE_DETECTOR_FLOAT16(
-        "Obstacle Detector Float16",
-        "obstacle_detector_float16.tflite",
-        "obstacle_detector_labels.txt"
-    ),
-    OBSTACLE_DETECTOR_FLOAT32(
-        "Obstacle Detector Float32",
-        "obstacle_detector_float32.tflite",
-        "obstacle_detector_labels.txt"
-    ),
+
+    //YoloV8 (Original Model)  ---------------------------------------------------------------------
+
     YOLOV8_FLOAT32(
         "YOLOv8 Float32",
         "yoloV8_float32.tflite",
         "yoloV8_labels.txt"
     );
 
+    /**Default model used across the application when no specific model is selected. */
     companion object {
-        val DEFAULT = OBSTACLE_32BIT
+        val DEFAULT = YOLO8_18_OBSTACLE_FP32BIT
     }
 }

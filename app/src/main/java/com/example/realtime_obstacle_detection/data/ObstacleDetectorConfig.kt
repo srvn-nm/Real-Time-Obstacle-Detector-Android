@@ -6,8 +6,8 @@ import android.content.Context
  *
  */
 class ObstacleDetectorConfig(
-    var modelPath: String = "best_float32.tflite",
-    var labelPath: String = "best_labels.txt",
+    var modelPath: String = "15Obstacles_yolov8_float32.tflite",
+    var labelPath: String = "15Obstacles_labels.txt",
     var threadsCount: Int = 3,
     var useNNAPI: Boolean = true,
     var confidenceThreshold: Float = 0.35F,
@@ -19,8 +19,8 @@ class ObstacleDetectorConfig(
         fun load(context: Context): ObstacleDetectorConfig {
             val prefs = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
             return ObstacleDetectorConfig(
-                modelPath = prefs.getString("modelPath", "best_float32.tflite")!!,
-                labelPath = prefs.getString("labelPath", "best_labels.txt")!!,
+                modelPath = prefs.getString("modelPath", "15Obstacles_yolov8_float32.tflite")!!,
+                labelPath = prefs.getString("labelPath", "15Obstacles_labels.txt")!!,
                 threadsCount = prefs.getInt("threadsCount", 3),
                 useNNAPI = prefs.getBoolean("useNNAPI", true),
                 confidenceThreshold = prefs.getFloat("confidenceThreshold", 0.35F),

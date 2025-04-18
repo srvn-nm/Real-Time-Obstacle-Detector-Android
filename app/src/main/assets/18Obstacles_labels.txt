@@ -1,0 +1,18 @@
+Bike
+Building
+Car
+Person
+Stairs
+Traffic sign
+Electrical Pole
+Road
+Motorcycle
+Dustbin
+Dog
+Manhole
+Tree
+Guard rail
+Pedestrian crosswalk
+Truck
+Bus
+Bench

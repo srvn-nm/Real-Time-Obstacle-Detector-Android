@@ -25,8 +25,8 @@ import androidx.core.graphics.scale
 class ObstacleDetector(
     private val context: Context,
     private val obstacleClassifier: ObstacleClassifier,
-    private val modelPath :String = "best_float32.tflite",
-    private val labelPath :String = "best_labels.txt",
+    private val modelPath :String = "15Obstacles_yolov8_float32.tflite",
+    private val labelPath :String = "15Obstacles_labels.txt",
     private val threadsCount :Int = 3,
     private val useNNAPI : Boolean= true,
     private val confidenceThreshold : Float = 0.35F,
