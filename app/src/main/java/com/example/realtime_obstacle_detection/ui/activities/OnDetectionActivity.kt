@@ -135,7 +135,7 @@ class OnDetectionActivity : ComponentActivity(), ObstacleClassifier {
                                 .padding(8.dp)
                         ) {
                             Text(
-                                text = "FPmS: ${fps.toDouble() / 1000.0}",
+                                text = "FPS: $fps",
                                 color = Color.White,
                                 fontSize = 16.sp,
                                 modifier = Modifier
