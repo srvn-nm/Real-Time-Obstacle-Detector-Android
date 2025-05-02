@@ -140,7 +140,7 @@ class BlindDetectorActivity : ComponentActivity(), ObstacleClassifier, TextToSpe
                                 .padding(8.dp)
                         ) {
                             Text(
-                                text = "FPmS: ${fps / 1000}",
+                                text = "FPmS: ${fps.toDouble() / 1000.0}",
                                 color = Color.White,
                                 fontSize = 16.sp,
                                 modifier = Modifier
