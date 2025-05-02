@@ -123,7 +123,7 @@ class WalkAroundActivity : ComponentActivity(), ObstacleClassifier {
                                 .padding(8.dp)
                         ) {
                             androidx.compose.material3.Text(
-                                text = "FPmS: ${fps.toDouble() / 1000.0}",
+                                text = "FPS: $fps",
                                 color = Color.White,
                                 fontSize = 16.sp,
                                 modifier = Modifier
