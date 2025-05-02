@@ -6,7 +6,6 @@ import android.speech.tts.TextToSpeech
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-//import androidx.activity.enableEdgeToEdge
 import androidx.camera.core.CameraSelector
 import androidx.camera.extensions.ExtensionMode
 import androidx.camera.extensions.ExtensionsManager
@@ -14,6 +13,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.CameraController
 import androidx.camera.view.LifecycleCameraController
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 //noinspection UsingMaterialAndMaterial3Libraries
@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -59,6 +60,7 @@ class BlindDetectorActivity : ComponentActivity(), ObstacleClassifier, TextToSpe
     private var isDetectorReady by mutableStateOf(false)
     // Mutable state to hold the computed FPS value
     private var fps by mutableIntStateOf(0)
+    private var inferenceTimeMs by mutableLongStateOf(0L)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -133,15 +135,25 @@ class BlindDetectorActivity : ComponentActivity(), ObstacleClassifier, TextToSpe
                                 controller = controller,
                                 modifier = Modifier.fillMaxSize()
                             )
+                        Column(
+                            modifier = Modifier
+                                .padding(8.dp)
+                        ) {
                             Text(
-                                text = "FPS: $fps",
+                                text = "FPmS: ${fps / 1000}",
                                 color = Color.White,
                                 fontSize = 16.sp,
                                 modifier = Modifier
                                     .padding(16.dp)
-
                             )
-
+                            Text(
+                                text = "Infer: $inferenceTimeMs ms",
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                modifier = Modifier
+                                    .padding(16.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -173,6 +185,9 @@ class BlindDetectorActivity : ComponentActivity(), ObstacleClassifier, TextToSpe
             obstacleDetector = obstacleDetector,
             onFpsCalculated = { calculatedFps ->
                 runOnUiThread { fps = calculatedFps } // 'fps' is your mutable state variable
+            },
+            onInferenceTime = { ms ->
+                runOnUiThread { inferenceTimeMs = ms }
             }
         )
         controller.setImageAnalysisAnalyzer(
