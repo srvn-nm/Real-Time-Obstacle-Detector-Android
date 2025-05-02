@@ -14,6 +14,7 @@ import androidx.camera.view.CameraController
 import androidx.camera.view.LifecycleCameraController
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 //noinspection UsingMaterialAndMaterial3Libraries
@@ -24,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -61,6 +63,7 @@ class OnDetectionActivity : ComponentActivity(), ObstacleClassifier {
     private var isDetectorReady by mutableStateOf(false)
     // Mutable state to hold the computed FPS value
     private var fps by mutableIntStateOf(0)
+    private var inferenceTimeMs by mutableLongStateOf(0L)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -127,13 +130,25 @@ class OnDetectionActivity : ComponentActivity(), ObstacleClassifier {
                                 controller = controller,
                                 modifier = Modifier.fillMaxSize()
                             )
+                        Column(
+                            modifier = Modifier
+                                .padding(8.dp)
+                        ) {
                             Text(
-                                text = "FPS: $fps",
+                                text = "FPmS: ${fps/1000}",
                                 color = Color.White,
                                 fontSize = 16.sp,
                                 modifier = Modifier
                                     .padding(16.dp)
                             )
+                            Text(
+                                text = "Infer: $inferenceTimeMs ms",
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                modifier = Modifier
+                                    .padding(16.dp)
+                            )
+                        }
 
                         image?.let {
                             Image(
@@ -175,6 +190,9 @@ class OnDetectionActivity : ComponentActivity(), ObstacleClassifier {
             obstacleDetector = obstacleDetector,
             onFpsCalculated = { calculatedFps ->
                 runOnUiThread { fps = calculatedFps } // 'fps' is your mutable state variable
+            },
+            onInferenceTime = { ms ->
+                runOnUiThread { inferenceTimeMs = ms }
             }
         )
         controller.setImageAnalysisAnalyzer(
