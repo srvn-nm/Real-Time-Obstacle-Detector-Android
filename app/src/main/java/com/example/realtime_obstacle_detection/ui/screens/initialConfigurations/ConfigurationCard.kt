@@ -45,9 +45,9 @@ fun ConfigurationCard(
     onConfigurationSelected: (ModelConfig) -> Unit
 ) {
     var selectedModel by remember { mutableStateOf(Models.DEFAULT) }
-    var configThreshold by remember { mutableFloatStateOf(0.5f) }
-    var iouThreshold by remember { mutableFloatStateOf(0.5f) }
-    var threadCount by remember { mutableFloatStateOf(1f) }
+    var configThreshold by remember { mutableFloatStateOf(0.2f) }
+    var iouThreshold by remember { mutableFloatStateOf(0.2f) }
+    var threadCount by remember { mutableFloatStateOf(4f) }
     var nnApiEnabled by remember { mutableStateOf(true) }
     var dropdownExpanded by remember { mutableStateOf(false) }
 
