@@ -7,7 +7,8 @@ import com.example.realtime_obstacle_detection.data.ObstacleDetector
 
 class TensorFlowLiteFrameAnalyzer (
     private val obstacleDetector: ObstacleDetector,
-    private val onFpsCalculated: ((Int) -> Unit)? = null
+    private val onFpsCalculated: ((Int) -> Unit)? = null,
+    private val onInferenceTime: ((Long) -> Unit)? = null
 ): ImageAnalysis.Analyzer {
 
     private var frameSkipCounter = 0
@@ -41,7 +42,11 @@ class TensorFlowLiteFrameAnalyzer (
 
             Log.d("processing time", "Preprocessing and rotation took $duration seconds")
 
-            obstacleDetector.detect(image = bitmap)
+            // 1) Measure inference:
+            val t0 = System.currentTimeMillis()
+            obstacleDetector.detect(bitmap)
+            val inferenceMs = System.currentTimeMillis() - t0
+            onInferenceTime?.invoke(inferenceMs)
 
         }
         frameSkipCounter++

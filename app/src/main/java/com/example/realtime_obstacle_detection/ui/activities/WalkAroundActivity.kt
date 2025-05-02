@@ -53,6 +53,7 @@ class WalkAroundActivity : ComponentActivity(), ObstacleClassifier {
     private var isDetectorReady by mutableStateOf(false)
     // Mutable state to hold the computed FPS value
     private var fps by mutableIntStateOf(0)
+    private var inferenceTimeMs by mutableLongStateOf(0L)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -117,14 +118,25 @@ class WalkAroundActivity : ComponentActivity(), ObstacleClassifier {
                                 controller = controller,
                                 modifier = Modifier.fillMaxSize()
                             )
-                            Text(
-                                text = "FPS: $fps",
+                        Column(
+                            modifier = Modifier
+                                .padding(8.dp)
+                        ) {
+                            androidx.compose.material3.Text(
+                                text = "FPmS: ${fps / 1000}",
                                 color = Color.White,
                                 fontSize = 16.sp,
                                 modifier = Modifier
                                     .padding(16.dp)
-
                             )
+                            androidx.compose.material3.Text(
+                                text = "Infer: $inferenceTimeMs ms",
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                modifier = Modifier
+                                    .padding(16.dp)
+                            )
+                        }
 
 
                         if (showAlert) {
@@ -173,6 +185,9 @@ class WalkAroundActivity : ComponentActivity(), ObstacleClassifier {
             obstacleDetector = obstacleDetector,
             onFpsCalculated = { calculatedFps ->
                 runOnUiThread { fps = calculatedFps } // 'fps' is your mutable state variable
+            },
+            onInferenceTime = { ms ->
+                runOnUiThread { inferenceTimeMs = ms }
             }
         )
         controller.setImageAnalysisAnalyzer(
