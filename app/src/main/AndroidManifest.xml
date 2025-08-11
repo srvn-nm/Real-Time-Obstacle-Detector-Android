@@ -7,7 +7,7 @@
     <uses-feature android:name="android.hardware.camera" />
 
     <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="android.permission.VIBRATE" />
+
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="32"
@@ -26,11 +26,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Realtime_Obstacle_Detection"
         tools:targetApi="31">
-        <activity
-            android:name=".ui.activities.SettingsActivity"
-            android:exported="false"
-            android:label="@string/title_activity_settings"
-            android:theme="@style/Theme.Realtime_Obstacle_Detection" />
         <activity
             android:name=".ui.activities.OnDetectionActivity"
             android:exported="false"
