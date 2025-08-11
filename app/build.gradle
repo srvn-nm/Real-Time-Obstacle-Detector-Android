@@ -30,9 +30,30 @@ android {
     }
     kotlinOptions {
         jvmTarget = '1.8'
+        // Add compiler arguments to fix Kotlin issues
+        freeCompilerArgs += [
+                "-Xno-optimized-callable-references",
+                "-Xno-kotlin-nothing-value-exception"
+        ]
     }
+
+    kotlin {
+        jvmToolchain(17)
+    }
+
     buildFeatures {
         compose true
+    }
+
+    packagingOptions {
+        // Avoid duplicate native libs
+        exclude "META-INF/*"
+    }
+
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['src/main/jniLibs']
+        }
     }
 }
 
@@ -67,15 +88,15 @@ dependencies {
     implementation(libs.androidx.camera.extensions)
 
 
-    //tensorflow lite
-    implementation(libs.tensorflow.lite)
-    implementation(libs.tensorflow.lite.support)
+    //tensorflow lite - align versions
+    implementation 'org.tensorflow:tensorflow-lite:2.14.0'
+    implementation 'org.tensorflow:tensorflow-lite-gpu:2.14.0'
+    implementation 'org.tensorflow:tensorflow-lite-support:0.4.4'
+    implementation 'org.tensorflow:tensorflow-lite-task-vision:0.4.4'
+    implementation 'org.tensorflow:tensorflow-lite-gpu-api:2.14.0'
 
-    implementation(libs.tensorflow.lite.task.vision)
-    implementation(libs.tensorflow.lite.gpu.delegate.plugin)
-    implementation(libs.tensorflow.lite.gpu)
+    implementation libs.androidx.datastore.preferences
 
-    implementation(libs.tensorflow.lite.gpu.api)
-
-    implementation "androidx.datastore:datastore-preferences:1.1.2"
+    // OpenCV (native .so required separately)
+    implementation project(':opencv2')
 }
