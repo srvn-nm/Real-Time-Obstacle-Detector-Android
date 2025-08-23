@@ -163,6 +163,9 @@ class OnDetectionActivity : ComponentActivity(), ObstacleClassifier {
         }
     }
 
+    /**
+     * Setup CameraX extensions like HDR if supported.
+     */
     private fun setupCameraXExtensions() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener({
@@ -184,6 +187,9 @@ class OnDetectionActivity : ComponentActivity(), ObstacleClassifier {
         }, ContextCompat.getMainExecutor(this))
     }
 
+    /**
+     * Setup CameraX extensions like HDR if supported.
+     */
     private fun bindCameraUseCases(controller: LifecycleCameraController) {
         // Update the FPS state on the main thread.
         val analyzer = TensorFlowLiteFrameAnalyzer(
@@ -202,10 +208,15 @@ class OnDetectionActivity : ComponentActivity(), ObstacleClassifier {
         controller.bindToLifecycle(this)
     }
 
+    /**
+     * Callback when objects are detected.
+     * We draw bounding boxes + overlay distance labels.
+     */
     override fun onDetect(objectDetectionResults: List<ObjectDetectionResult>, detectedScene: Bitmap) {
         Log.i("obstacle detector", "Detected objects: $objectDetectionResults")
         processingScope.launch {
             val startTime = System.currentTimeMillis()
+            // Draw boxes and distance text
             val updatedBitmap = drawBoundingBoxes(
                 detectedScene,
                 objectDetectionResults,
