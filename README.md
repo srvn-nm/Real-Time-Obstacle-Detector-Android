@@ -28,7 +28,7 @@ Built entirely in Kotlin with Jetpack Compose for a modern, reactive UI, the app
 
 1. **Clone** this repository  
    ```bash
-   git clone https://github.com/YourUsername/ObstacleDetector-Android.git
+   git clone git@github.com:Real-time-Obstacle-Detector/Android-Application.git
    cd ObstacleDetector-Android
 
 2. Open in Android Studio and Sync Gradle
