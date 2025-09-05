@@ -227,7 +227,7 @@ class WalkAroundActivity : ComponentActivity(), ObstacleClassifier {
         closestObject?.let {
             if (it.distance != null) {
                 val distance = it.distance
-                val warningLevel = if (distance < 1f) "DANGER" else "CAUTION"
+                val warningLevel = if (distance!! < 1f) "DANGER" else "CAUTION"
                 val message = "You are ${if (warningLevel == "DANGER") "very close" else "approaching"} to a ${it.className}."
 
                 modelMessage = message
