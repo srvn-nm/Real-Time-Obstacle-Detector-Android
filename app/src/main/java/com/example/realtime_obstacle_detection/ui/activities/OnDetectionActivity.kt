@@ -46,6 +46,10 @@ import com.example.realtime_obstacle_detection.ui.screens.initialConfigurations.
 import com.example.realtime_obstacle_detection.ui.screens.initialConfigurations.ModelConfig
 import com.example.realtime_obstacle_detection.ui.theme.primary
 import com.example.realtime_obstacle_detection.utis.boxdrawer.drawBoundingBoxes
+import com.google.ar.core.Config
+import com.google.ar.core.Frame
+import com.google.ar.core.Session
+import io.github.sceneview.ar.ARSceneView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -53,20 +57,52 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class OnDetectionActivity : ComponentActivity(), ObstacleClassifier {
+
+    // Detected frame bitmap with bounding boxes overlay
     private var image by mutableStateOf<Bitmap?>(null)
+    // Detector + config
     private lateinit var obstacleDetector: ObstacleDetector
+    private var modelConfig: ModelConfig? = null
+    // CameraX extensions
     private lateinit var extensionsManager: ExtensionsManager
     private lateinit var cameraProvider: ProcessCameraProvider
+    // Scope for background work
     private val processingScope = CoroutineScope(Dispatchers.IO)
-    private var modelConfig: ModelConfig? = null
     // State to track whether the detector is ready
     private var isDetectorReady by mutableStateOf(false)
     // Mutable state to hold the computed FPS value
     private var fps by mutableIntStateOf(0)
     private var inferenceTimeMs by mutableLongStateOf(0L)
+    // AR SceneView (SceneView manages the AR session automatically)
+    private lateinit var arSceneView: ARSceneView
+    private var latestFrame: Frame? = null
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // ✅ Initialize ARSceneView (no manual resume/pause/destroy needed)
+        arSceneView = ARSceneView(
+            context = this,
+            sessionFeatures = setOf(
+                Session.Feature.SHARED_CAMERA
+            ),
+            sessionConfiguration = { session, config ->
+                // Configure ARCore session
+                config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+                config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
+                config.depthMode = Config.DepthMode.AUTOMATIC
+                session.configure(config)
+            },
+            onSessionUpdated = { session: Session, frame: Frame ->
+                // 🔹 Called every frame (~30-60 fps)
+                // Useful for depth, raycasting, or updating UI overlays
+                latestFrame = frame
+            },
+            onSessionFailed = { exception ->
+                Log.e("ARSceneView", "AR session failed: ${exception.localizedMessage}")
+            }
+        )
 
         setContent {
             var isConfigured by remember { mutableStateOf(false) }
@@ -216,14 +252,21 @@ class OnDetectionActivity : ComponentActivity(), ObstacleClassifier {
         Log.i("obstacle detector", "Detected objects: $objectDetectionResults")
         processingScope.launch {
             val startTime = System.currentTimeMillis()
-            // Draw boxes and distance text
+            val frame = latestFrame // Get latest AR frame
+            if (frame != null) {
+            // Draw boxes and distance text w/ ARCore distances
             val updatedBitmap = drawBoundingBoxes(
                 detectedScene,
                 objectDetectionResults,
                 modelConfig?.configThreshold ?: 0.5f,
-                modelConfig?.iouThreshold ?: 0.5f
+                modelConfig?.iouThreshold ?: 0.5f,
+                arSceneView // pass ARSceneView so we can hitTest for depth
             )
             image = updatedBitmap
+            } else {
+                Log.w("onDetect", "No AR frame available yet")
+                image = detectedScene
+            }
             val duration = (System.currentTimeMillis() - startTime) / 1000.0
             Log.d("Bounding Box", "Drawing took $duration seconds")
         }
