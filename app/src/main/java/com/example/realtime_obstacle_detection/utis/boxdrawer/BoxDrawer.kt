@@ -9,12 +9,17 @@ import android.graphics.Typeface
 import android.util.Log
 import com.example.realtime_obstacle_detection.domain.ObjectDetectionResult
 import com.example.realtime_obstacle_detection.utis.saveImage.saveBitmapAsPNG
+import com.google.ar.core.Frame
+import com.google.ar.core.HitResult
+import io.github.sceneview.ar.ARSceneView
+import kotlin.math.sqrt
 
 fun drawBoundingBoxes(
     bitmap: Bitmap,
     boxes: List<ObjectDetectionResult>,
     confThreshold: Float,
-    iouThreshold: Float
+    iouThreshold: Float,
+    arSceneView: ARSceneView
 ): Bitmap {
     val mutableBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
     val canvas = Canvas(mutableBitmap)
@@ -50,7 +55,11 @@ fun drawBoundingBoxes(
         color = Color.BLUE
         textSize = 40f
         typeface = Typeface.DEFAULT_BOLD
+        setShadowLayer(5f, 0f, 0f, Color.WHITE)
     }
+
+    //  Get current AR frame from SceneView
+    val frame: Frame? = arSceneView.frame
 
     for (box in selectedBoxes) {
         // Set color based on confidence level
@@ -73,18 +82,56 @@ fun drawBoundingBoxes(
         // Draw bounding box
         canvas.drawRect(rect, paint)
 
-        // Draw label with confidence
-        val labelText = "${box.className} (${"%.2f".format(box.confidenceRate)})"
+        // Get center of bounding box
+        val centerX = (rect.left + rect.right) / 2f
+        val centerY = (rect.top + rect.bottom) / 2f
+
+        var distanceText = "N/A"
+
+        // Perform AR raycast
+        frame?.let { currentFrame ->
+            try {
+                // Perform hit test
+                val hits: List<HitResult> = currentFrame.hitTest(centerX, centerY)
+                if (hits.isNotEmpty()) {
+                    val hit = hits[0]
+                    // Camera pose (for distance calculation)
+                    val cameraPose = currentFrame.camera.pose
+                    val objPose = hit.hitPose
+
+                    // Compute distance using 3D Euclidean distance :cite[2]:cite[6]
+                    val dx = objPose.tx() - cameraPose.tx()
+                    val dy = objPose.ty() - cameraPose.ty()
+                    val dz = objPose.tz() - cameraPose.tz()
+                    val distanceMeters = sqrt(dx * dx + dy * dy + dz * dz)
+
+                    distanceText = "%.2f m".format(distanceMeters)
+                    // Store the calculated distance in the detection result
+                    box.distance = distanceMeters
+                } else {
+                    distanceText = "No Hit"
+                    box.distance = null
+                    Log.w("ARHitTest", "No surface detected for bounding box at center ($centerX, $centerY)")
+                }
+            } catch (e: Exception) {
+                Log.e("ARHitTest", "Error during hit test: ${e.message}")
+            }
+        }
+
+        // Draw label with confidence + distance
+        val labelText = "${box.className} (${"%.2f".format(box.confidenceRate)}) in $distanceText "
         canvas.drawText(labelText, rect.left, rect.top - 10, textPaint)
 
         // Log detection metrics
-        Log.i("DetectionMetrics", """
+        Log.i(
+            "DetectionMetrics", """
             Class: ${box.className}
             Confidence: ${"%.2f".format(box.confidenceRate)}
             Distance: ${"%.2f".format(box.distance)}
             Position: (${"%.2f".format(box.x1)}, ${"%.2f".format(box.y1)}) - 
             (${"%.2f".format(box.x2)}, ${"%.2f".format(box.y2)})
-        """.trimIndent())
+        """.trimIndent()
+        )
 
         saveBitmapAsPNG(mutableBitmap, box.className)
     }
