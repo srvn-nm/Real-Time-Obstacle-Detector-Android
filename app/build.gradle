@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace 'com.example.realtime_obstacle_detection'
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId "com.example.realtime_obstacle_detection"
         minSdk 24
-        targetSdk 34
+        targetSdk 35
         versionCode 1
         versionName "1.0"
 
@@ -31,15 +31,15 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
         // Add compiler arguments to fix Kotlin issues
-        freeCompilerArgs += [
-                "-Xno-optimized-callable-references",
-                "-Xno-kotlin-nothing-value-exception"
-        ]
+//        freeCompilerArgs += [
+//                "-Xno-optimized-callable-references",
+//                "-Xno-kotlin-nothing-value-exception"
+//        ]
     }
 
-    kotlin {
-        jvmToolchain(17)
-    }
+//    kotlin {
+//        jvmToolchain(17)
+//    }
 
     buildFeatures {
         compose true
@@ -71,6 +71,7 @@ dependencies {
     implementation libs.androidx.material.icons.core
     implementation libs.androidx.material.icons.extended
     implementation(libs.androidx.material3)
+    implementation libs.androidx.core
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -95,8 +96,7 @@ dependencies {
     implementation 'org.tensorflow:tensorflow-lite-task-vision:0.4.4'
     implementation 'org.tensorflow:tensorflow-lite-gpu-api:2.14.0'
 
-    implementation libs.androidx.datastore.preferences
+    // ARSceneview for augmented reality capabilities
+    implementation 'io.github.sceneview:arsceneview:2.3.0'
 
-    // OpenCV (native .so required separately)
-    implementation project(':opencv2')
 }
