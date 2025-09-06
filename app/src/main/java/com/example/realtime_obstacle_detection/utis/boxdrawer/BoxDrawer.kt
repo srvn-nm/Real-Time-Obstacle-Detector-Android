@@ -9,40 +9,22 @@ import android.graphics.Typeface
 import android.util.Log
 import com.example.realtime_obstacle_detection.domain.ObjectDetectionResult
 import com.example.realtime_obstacle_detection.utis.saveImage.saveBitmapAsPNG
-import com.google.ar.core.Frame
-import com.google.ar.core.HitResult
-import io.github.sceneview.ar.ARSceneView
-import kotlin.math.sqrt
 
+
+/**
+ * Draws bounding boxes on a bitmap. This function no longer handles ARCore hit tests.
+ * Instead, it receives the distance already computed on the main thread.
+ *
+ * @param bitmap The bitmap to draw on.
+ * @param boxes The list of detection results, now including the distance.
+ * @return The new bitmap with the bounding boxes drawn.
+ */
 fun drawBoundingBoxes(
     bitmap: Bitmap,
-    boxes: List<ObjectDetectionResult>,
-    confThreshold: Float,
-    iouThreshold: Float,
-    arSceneView: ARSceneView
+    boxes: List<ObjectDetectionResult>
 ): Bitmap {
     val mutableBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
     val canvas = Canvas(mutableBitmap)
-
-    // Filter boxes by confidence threshold
-    val filteredBoxes = boxes.filter { it.confidenceRate >= confThreshold }
-
-    // Apply Non-Maximum Suppression (NMS) using IoU threshold
-    val sortedBoxes = filteredBoxes.sortedByDescending { it.confidenceRate }
-    val selectedBoxes = mutableListOf<ObjectDetectionResult>()
-
-    for (box in sortedBoxes) {
-        var shouldAdd = true
-        for (selected in selectedBoxes) {
-            if (calculateIoU(box, selected) > iouThreshold) {
-                shouldAdd = false
-                break
-            }
-        }
-        if (shouldAdd) {
-            selectedBoxes.add(box)
-        }
-    }
 
     // Configure paints
     val paint = Paint().apply {
@@ -58,19 +40,13 @@ fun drawBoundingBoxes(
         setShadowLayer(5f, 0f, 0f, Color.WHITE)
     }
 
-    //  Get current AR frame from SceneView
-    val frame: Frame? = arSceneView.frame
-
-    for (box in selectedBoxes) {
+    for (box in boxes) {
         // Set color based on confidence level
         paint.color = when {
             box.confidenceRate >= 0.7 -> Color.GREEN
             box.confidenceRate >= 0.4 -> Color.YELLOW
             else -> Color.RED
         }
-
-        Log.i("obstacle detector confidence rate", "confidenceRate ratio: ${box.confidenceRate}")
-        Log.i("obstacle detector distance ratio", "distance ratio: ${box.distance}")
 
         val rect = RectF(
             box.x1 * mutableBitmap.width,
@@ -82,43 +58,8 @@ fun drawBoundingBoxes(
         // Draw bounding box
         canvas.drawRect(rect, paint)
 
-        // Get center of bounding box
-        val centerX = (rect.left + rect.right) / 2f
-        val centerY = (rect.top + rect.bottom) / 2f
-
-        var distanceText = "N/A"
-
-        // Perform AR raycast
-        frame?.let { currentFrame ->
-            try {
-                // Perform hit test
-                val hits: List<HitResult> = currentFrame.hitTest(centerX, centerY)
-                if (hits.isNotEmpty()) {
-                    val hit = hits[0]
-                    // Camera pose (for distance calculation)
-                    val cameraPose = currentFrame.camera.pose
-                    val objPose = hit.hitPose
-
-                    // Compute distance using 3D Euclidean distance :cite[2]:cite[6]
-                    val dx = objPose.tx() - cameraPose.tx()
-                    val dy = objPose.ty() - cameraPose.ty()
-                    val dz = objPose.tz() - cameraPose.tz()
-                    val distanceMeters = sqrt(dx * dx + dy * dy + dz * dz)
-
-                    distanceText = "%.2f m".format(distanceMeters)
-                    // Store the calculated distance in the detection result
-                    box.distance = distanceMeters
-                } else {
-                    distanceText = "No Hit"
-                    box.distance = null
-                    Log.w("ARHitTest", "No surface detected for bounding box at center ($centerX, $centerY)")
-                }
-            } catch (e: Exception) {
-                Log.e("ARHitTest", "Error during hit test: ${e.message}")
-            }
-        }
-
         // Draw label with confidence + distance
+        val distanceText = box.distance?.let { "%.2f m".format(it) } ?: "N/A"
         val labelText = "${box.className} (${"%.2f".format(box.confidenceRate)}) in $distanceText "
         canvas.drawText(labelText, rect.left, rect.top - 10, textPaint)
 
@@ -139,7 +80,7 @@ fun drawBoundingBoxes(
     return mutableBitmap
 }
 
-private fun calculateIoU(a: ObjectDetectionResult, b: ObjectDetectionResult): Float {
+fun calculateIoU(a: ObjectDetectionResult, b: ObjectDetectionResult): Float {
     val areaA = (a.x2 - a.x1) * (a.y2 - a.y1)
     val areaB = (b.x2 - b.x1) * (b.y2 - b.y1)
 
