@@ -45,9 +45,11 @@ import com.example.realtime_obstacle_detection.presentation.tensorflow.TensorFlo
 import com.example.realtime_obstacle_detection.ui.screens.initialConfigurations.ConfigurationCard
 import com.example.realtime_obstacle_detection.ui.screens.initialConfigurations.ModelConfig
 import com.example.realtime_obstacle_detection.ui.theme.primary
+import com.example.realtime_obstacle_detection.utis.boxdrawer.calculateIoU
 import com.example.realtime_obstacle_detection.utis.boxdrawer.drawBoundingBoxes
 import com.google.ar.core.Config
 import com.google.ar.core.Frame
+import com.google.ar.core.HitResult
 import com.google.ar.core.Session
 import io.github.sceneview.ar.ARSceneView
 import kotlinx.coroutines.CoroutineScope
@@ -55,6 +57,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.sqrt
 
 class OnDetectionActivity : ComponentActivity(), ObstacleClassifier {
 
@@ -81,7 +84,7 @@ class OnDetectionActivity : ComponentActivity(), ObstacleClassifier {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // ✅ Initialize ARSceneView (no manual resume/pause/destroy needed)
+        // Initialize ARSceneView (no manual resume/pause/destroy needed)
         arSceneView = ARSceneView(
             context = this,
             sessionFeatures = setOf(
@@ -246,29 +249,78 @@ class OnDetectionActivity : ComponentActivity(), ObstacleClassifier {
 
     /**
      * Callback when objects are detected.
-     * We draw bounding boxes + overlay distance labels.
+     * The ARCore distance calculation is now performed on the main thread to ensure correctness.
      */
     override fun onDetect(objectDetectionResults: List<ObjectDetectionResult>, detectedScene: Bitmap) {
-        Log.i("obstacle detector", "Detected objects: $objectDetectionResults")
-        processingScope.launch {
-            val startTime = System.currentTimeMillis()
-            val frame = latestFrame // Get latest AR frame
+        // Run ARCore-related operations on the main thread
+        runOnUiThread {
+            val frame = latestFrame
             if (frame != null) {
-            // Draw boxes and distance text w/ ARCore distances
-            val updatedBitmap = drawBoundingBoxes(
-                detectedScene,
-                objectDetectionResults,
-                modelConfig?.configThreshold ?: 0.5f,
-                modelConfig?.iouThreshold ?: 0.5f,
-                arSceneView // pass ARSceneView so we can hitTest for depth
-            )
-            image = updatedBitmap
+                // List to hold results with distance information
+                val resultsWithDistance = mutableListOf<ObjectDetectionResult>()
+
+                for (box in objectDetectionResults) {
+                    val bitmapWidth = detectedScene.width.toFloat()
+                    val bitmapHeight = detectedScene.height.toFloat()
+                    val centerX = (box.x1 + box.x2) / 2f * bitmapWidth
+                    val centerY = (box.y1 + box.y2) / 2f * bitmapHeight
+
+                    val hitResults: List<HitResult> = try {
+                        frame.hitTest(centerX, centerY)
+                    } catch (e: Exception) {
+                        Log.e("ARHitTest", "Error during hit test: ${e.message}")
+                        emptyList()
+                    }
+
+                    // Create a copy of the result to update the distance
+                    val newResult = box.copy()
+
+                    if (hitResults.isNotEmpty()) {
+                        val hit = hitResults[0]
+                        val cameraPose = frame.camera.pose
+                        val objPose = hit.hitPose
+
+                        val dx = objPose.tx() - cameraPose.tx()
+                        val dy = objPose.ty() - cameraPose.ty()
+                        val dz = objPose.tz() - cameraPose.tz()
+                        val distanceMeters = sqrt(dx * dx + dy * dy + dz * dz)
+                        newResult.distance = distanceMeters
+                    } else {
+                        Log.w("ARHitTest", "No surface detected for bounding box at center ($centerX, $centerY)")
+                        newResult.distance = null
+                    }
+                    resultsWithDistance.add(newResult)
+                }
+
+                // Now launch the background scope with the final results
+                processingScope.launch {
+                    // Filter and apply NMS here, as before, but with the new results
+                    val filteredBoxes = resultsWithDistance.filter {
+                        it.confidenceRate >= (modelConfig?.configThreshold ?: 0.5f)
+                    }
+                    val sortedBoxes = filteredBoxes.sortedByDescending { it.confidenceRate }
+                    val selectedBoxes = mutableListOf<ObjectDetectionResult>()
+
+                    for (box in sortedBoxes) {
+                        var shouldAdd = true
+                        for (selected in selectedBoxes) {
+                            if (calculateIoU(box, selected) > (modelConfig?.iouThreshold ?: 0.5f)) {
+                                shouldAdd = false
+                                break
+                            }
+                        }
+                        if (shouldAdd) {
+                            selectedBoxes.add(box)
+                        }
+                    }
+
+                    val updatedBitmap = drawBoundingBoxes(detectedScene, selectedBoxes)
+                    image = updatedBitmap
+                }
             } else {
                 Log.w("onDetect", "No AR frame available yet")
                 image = detectedScene
             }
-            val duration = (System.currentTimeMillis() - startTime) / 1000.0
-            Log.d("Bounding Box", "Drawing took $duration seconds")
         }
     }
 
