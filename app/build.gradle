@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace 'com.example.realtime_obstacle_detection'
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId "com.example.realtime_obstacle_detection"
         minSdk 24
-        targetSdk 34
+        targetSdk 35
         versionCode 1
         versionName "1.0"
 
@@ -30,9 +30,30 @@ android {
     }
     kotlinOptions {
         jvmTarget = '1.8'
+        // Add compiler arguments to fix Kotlin issues
+//        freeCompilerArgs += [
+//                "-Xno-optimized-callable-references",
+//                "-Xno-kotlin-nothing-value-exception"
+//        ]
     }
+
+//    kotlin {
+//        jvmToolchain(17)
+//    }
+
     buildFeatures {
         compose true
+    }
+
+    packagingOptions {
+        // Avoid duplicate native libs
+        exclude "META-INF/*"
+    }
+
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['src/main/jniLibs']
+        }
     }
 }
 
@@ -50,6 +71,7 @@ dependencies {
     implementation libs.androidx.material.icons.core
     implementation libs.androidx.material.icons.extended
     implementation(libs.androidx.material3)
+    implementation libs.androidx.core
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -67,15 +89,14 @@ dependencies {
     implementation(libs.androidx.camera.extensions)
 
 
-    //tensorflow lite
-    implementation(libs.tensorflow.lite)
-    implementation(libs.tensorflow.lite.support)
+    //tensorflow lite - align versions
+    implementation 'org.tensorflow:tensorflow-lite:2.14.0'
+    implementation 'org.tensorflow:tensorflow-lite-gpu:2.14.0'
+    implementation 'org.tensorflow:tensorflow-lite-support:0.4.4'
+    implementation 'org.tensorflow:tensorflow-lite-task-vision:0.4.4'
+    implementation 'org.tensorflow:tensorflow-lite-gpu-api:2.14.0'
 
-    implementation(libs.tensorflow.lite.task.vision)
-    implementation(libs.tensorflow.lite.gpu.delegate.plugin)
-    implementation(libs.tensorflow.lite.gpu)
+    // ARSceneview for augmented reality capabilities
+    implementation 'io.github.sceneview:arsceneview:2.3.0'
 
-    implementation(libs.tensorflow.lite.gpu.api)
-
-    implementation "androidx.datastore:datastore-preferences:1.1.2"
 }

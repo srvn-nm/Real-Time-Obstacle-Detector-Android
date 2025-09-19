@@ -10,34 +10,21 @@ import android.util.Log
 import com.example.realtime_obstacle_detection.domain.ObjectDetectionResult
 import com.example.realtime_obstacle_detection.utis.saveImage.saveBitmapAsPNG
 
+
+/**
+ * Draws bounding boxes on a bitmap. This function no longer handles ARCore hit tests.
+ * Instead, it receives the distance already computed on the main thread.
+ *
+ * @param bitmap The bitmap to draw on.
+ * @param boxes The list of detection results, now including the distance.
+ * @return The new bitmap with the bounding boxes drawn.
+ */
 fun drawBoundingBoxes(
     bitmap: Bitmap,
-    boxes: List<ObjectDetectionResult>,
-    confThreshold: Float,
-    iouThreshold: Float
+    boxes: List<ObjectDetectionResult>
 ): Bitmap {
     val mutableBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
     val canvas = Canvas(mutableBitmap)
-
-    // Filter boxes by confidence threshold
-    val filteredBoxes = boxes.filter { it.confidenceRate >= confThreshold }
-
-    // Apply Non-Maximum Suppression (NMS) using IoU threshold
-    val sortedBoxes = filteredBoxes.sortedByDescending { it.confidenceRate }
-    val selectedBoxes = mutableListOf<ObjectDetectionResult>()
-
-    for (box in sortedBoxes) {
-        var shouldAdd = true
-        for (selected in selectedBoxes) {
-            if (calculateIoU(box, selected) > iouThreshold) {
-                shouldAdd = false
-                break
-            }
-        }
-        if (shouldAdd) {
-            selectedBoxes.add(box)
-        }
-    }
 
     // Configure paints
     val paint = Paint().apply {
@@ -50,18 +37,16 @@ fun drawBoundingBoxes(
         color = Color.BLUE
         textSize = 40f
         typeface = Typeface.DEFAULT_BOLD
+        setShadowLayer(5f, 0f, 0f, Color.WHITE)
     }
 
-    for (box in selectedBoxes) {
+    for (box in boxes) {
         // Set color based on confidence level
         paint.color = when {
             box.confidenceRate >= 0.7 -> Color.GREEN
             box.confidenceRate >= 0.4 -> Color.YELLOW
             else -> Color.RED
         }
-
-        Log.i("obstacle detector confidence rate", "confidenceRate ratio: ${box.confidenceRate}")
-        Log.i("obstacle detector distance ratio", "distance ratio: ${box.distance}")
 
         val rect = RectF(
             box.x1 * mutableBitmap.width,
@@ -73,18 +58,21 @@ fun drawBoundingBoxes(
         // Draw bounding box
         canvas.drawRect(rect, paint)
 
-        // Draw label with confidence
-        val labelText = "${box.className} (${"%.2f".format(box.confidenceRate)})"
+        // Draw label with confidence + distance
+        val distanceText = box.distance?.let { "%.2f m".format(it) } ?: "N/A"
+        val labelText = "${box.className} (${"%.2f".format(box.confidenceRate)}) in $distanceText "
         canvas.drawText(labelText, rect.left, rect.top - 10, textPaint)
 
         // Log detection metrics
-        Log.i("DetectionMetrics", """
+        Log.i(
+            "DetectionMetrics", """
             Class: ${box.className}
             Confidence: ${"%.2f".format(box.confidenceRate)}
             Distance: ${"%.2f".format(box.distance)}
             Position: (${"%.2f".format(box.x1)}, ${"%.2f".format(box.y1)}) - 
             (${"%.2f".format(box.x2)}, ${"%.2f".format(box.y2)})
-        """.trimIndent())
+        """.trimIndent()
+        )
 
         saveBitmapAsPNG(mutableBitmap, box.className)
     }
@@ -92,7 +80,7 @@ fun drawBoundingBoxes(
     return mutableBitmap
 }
 
-private fun calculateIoU(a: ObjectDetectionResult, b: ObjectDetectionResult): Float {
+fun calculateIoU(a: ObjectDetectionResult, b: ObjectDetectionResult): Float {
     val areaA = (a.x2 - a.x1) * (a.y2 - a.y1)
     val areaB = (b.x2 - b.x1) * (b.y2 - b.y1)
 

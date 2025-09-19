@@ -45,28 +45,67 @@ import com.example.realtime_obstacle_detection.presentation.tensorflow.TensorFlo
 import com.example.realtime_obstacle_detection.ui.screens.initialConfigurations.ConfigurationCard
 import com.example.realtime_obstacle_detection.ui.screens.initialConfigurations.ModelConfig
 import com.example.realtime_obstacle_detection.ui.theme.primary
+import com.example.realtime_obstacle_detection.utis.boxdrawer.calculateIoU
 import com.example.realtime_obstacle_detection.utis.boxdrawer.drawBoundingBoxes
+import com.google.ar.core.Config
+import com.google.ar.core.Frame
+import com.google.ar.core.HitResult
+import com.google.ar.core.Session
+import io.github.sceneview.ar.ARSceneView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.sqrt
 
 class OnDetectionActivity : ComponentActivity(), ObstacleClassifier {
+
+    // Detected frame bitmap with bounding boxes overlay
     private var image by mutableStateOf<Bitmap?>(null)
+    // Detector + config
     private lateinit var obstacleDetector: ObstacleDetector
+    private var modelConfig: ModelConfig? = null
+    // CameraX extensions
     private lateinit var extensionsManager: ExtensionsManager
     private lateinit var cameraProvider: ProcessCameraProvider
+    // Scope for background work
     private val processingScope = CoroutineScope(Dispatchers.IO)
-    private var modelConfig: ModelConfig? = null
     // State to track whether the detector is ready
     private var isDetectorReady by mutableStateOf(false)
     // Mutable state to hold the computed FPS value
     private var fps by mutableIntStateOf(0)
     private var inferenceTimeMs by mutableLongStateOf(0L)
+    // AR SceneView (SceneView manages the AR session automatically)
+    private lateinit var arSceneView: ARSceneView
+    private var latestFrame: Frame? = null
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Initialize ARSceneView (no manual resume/pause/destroy needed)
+        arSceneView = ARSceneView(
+            context = this,
+            sessionFeatures = setOf(
+                Session.Feature.SHARED_CAMERA
+            ),
+            sessionConfiguration = { session, config ->
+                // Configure ARCore session
+                config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+                config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
+                config.depthMode = Config.DepthMode.AUTOMATIC
+                session.configure(config)
+            },
+            onSessionUpdated = { session: Session, frame: Frame ->
+                // 🔹 Called every frame (~30-60 fps)
+                // Useful for depth, raycasting, or updating UI overlays
+                latestFrame = frame
+            },
+            onSessionFailed = { exception ->
+                Log.e("ARSceneView", "AR session failed: ${exception.localizedMessage}")
+            }
+        )
 
         setContent {
             var isConfigured by remember { mutableStateOf(false) }
@@ -163,6 +202,9 @@ class OnDetectionActivity : ComponentActivity(), ObstacleClassifier {
         }
     }
 
+    /**
+     * Setup CameraX extensions like HDR if supported.
+     */
     private fun setupCameraXExtensions() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener({
@@ -184,6 +226,9 @@ class OnDetectionActivity : ComponentActivity(), ObstacleClassifier {
         }, ContextCompat.getMainExecutor(this))
     }
 
+    /**
+     * Setup CameraX extensions like HDR if supported.
+     */
     private fun bindCameraUseCases(controller: LifecycleCameraController) {
         // Update the FPS state on the main thread.
         val analyzer = TensorFlowLiteFrameAnalyzer(
@@ -202,19 +247,80 @@ class OnDetectionActivity : ComponentActivity(), ObstacleClassifier {
         controller.bindToLifecycle(this)
     }
 
+    /**
+     * Callback when objects are detected.
+     * The ARCore distance calculation is now performed on the main thread to ensure correctness.
+     */
     override fun onDetect(objectDetectionResults: List<ObjectDetectionResult>, detectedScene: Bitmap) {
-        Log.i("obstacle detector", "Detected objects: $objectDetectionResults")
-        processingScope.launch {
-            val startTime = System.currentTimeMillis()
-            val updatedBitmap = drawBoundingBoxes(
-                detectedScene,
-                objectDetectionResults,
-                modelConfig?.configThreshold ?: 0.5f,
-                modelConfig?.iouThreshold ?: 0.5f
-            )
-            image = updatedBitmap
-            val duration = (System.currentTimeMillis() - startTime) / 1000.0
-            Log.d("Bounding Box", "Drawing took $duration seconds")
+        // Run ARCore-related operations on the main thread
+        runOnUiThread {
+            val frame = latestFrame
+            if (frame != null) {
+                // List to hold results with distance information
+                val resultsWithDistance = mutableListOf<ObjectDetectionResult>()
+
+                for (box in objectDetectionResults) {
+                    val bitmapWidth = detectedScene.width.toFloat()
+                    val bitmapHeight = detectedScene.height.toFloat()
+                    val centerX = (box.x1 + box.x2) / 2f * bitmapWidth
+                    val centerY = (box.y1 + box.y2) / 2f * bitmapHeight
+
+                    val hitResults: List<HitResult> = try {
+                        frame.hitTest(centerX, centerY)
+                    } catch (e: Exception) {
+                        Log.e("ARHitTest", "Error during hit test: ${e.message}")
+                        emptyList()
+                    }
+
+                    // Create a copy of the result to update the distance
+                    val newResult = box.copy()
+
+                    if (hitResults.isNotEmpty()) {
+                        val hit = hitResults[0]
+                        val cameraPose = frame.camera.pose
+                        val objPose = hit.hitPose
+
+                        val dx = objPose.tx() - cameraPose.tx()
+                        val dy = objPose.ty() - cameraPose.ty()
+                        val dz = objPose.tz() - cameraPose.tz()
+                        val distanceMeters = sqrt(dx * dx + dy * dy + dz * dz)
+                        newResult.distance = distanceMeters
+                    } else {
+                        Log.w("ARHitTest", "No surface detected for bounding box at center ($centerX, $centerY)")
+                        newResult.distance = null
+                    }
+                    resultsWithDistance.add(newResult)
+                }
+
+                // Now launch the background scope with the final results
+                processingScope.launch {
+                    // Filter and apply NMS here, as before, but with the new results
+                    val filteredBoxes = resultsWithDistance.filter {
+                        it.confidenceRate >= (modelConfig?.configThreshold ?: 0.5f)
+                    }
+                    val sortedBoxes = filteredBoxes.sortedByDescending { it.confidenceRate }
+                    val selectedBoxes = mutableListOf<ObjectDetectionResult>()
+
+                    for (box in sortedBoxes) {
+                        var shouldAdd = true
+                        for (selected in selectedBoxes) {
+                            if (calculateIoU(box, selected) > (modelConfig?.iouThreshold ?: 0.5f)) {
+                                shouldAdd = false
+                                break
+                            }
+                        }
+                        if (shouldAdd) {
+                            selectedBoxes.add(box)
+                        }
+                    }
+
+                    val updatedBitmap = drawBoundingBoxes(detectedScene, selectedBoxes)
+                    image = updatedBitmap
+                }
+            } else {
+                Log.w("onDetect", "No AR frame available yet")
+                image = detectedScene
+            }
         }
     }
 
