@@ -243,13 +243,13 @@ class ObstacleDetector(
                 val width = array[classIndex + elementsCount * 2]
                 val height = array[classIndex + elementsCount * 3]
                 val x1 = cx - (width/2F)
-                val y1 = cy - (width/2F)
+                val y1 = cy - (height/2F)
                 val x2 = cx + (width/2F)
                 val y2 = cy + (height/2F)
 
                 val distance = calculateDistance(
                     className= clsName,
-                    objectHeightInPixels= height,
+                    objectHeightInPixels= height * tensorHeight,
                     focalLengthInMM=focalLength,
                     imageHeightInPixels=tensorHeight.toFloat(),
                     sensorHeightInMM = sensorHeight
