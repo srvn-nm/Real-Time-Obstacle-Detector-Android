@@ -118,7 +118,7 @@ class ObjectDetectionInstrumentationTest {
         val mockClassifier = mock<ObstacleClassifier>()
 
         // Iterates through all possible combinations of model, NNAPI usage, and HDR setting.
-        for (model in Models.values()) {
+        for (model in Models.entries) {
             for (useNNAPI in listOf(true, false)) {
                 for (isHdrEnabled in listOf(true, false)) {
                     Log.d("TestRunner", "Testing model: ${model.displayName} with NNAPI=$useNNAPI, HDR=$isHdrEnabled")
