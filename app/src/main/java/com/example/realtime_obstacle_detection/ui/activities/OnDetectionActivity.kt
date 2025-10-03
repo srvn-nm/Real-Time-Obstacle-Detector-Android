@@ -62,7 +62,7 @@ import kotlin.math.sqrt
 class OnDetectionActivity : ComponentActivity(), ObstacleClassifier {
 
     // Detected frame bitmap with bounding boxes overlay
-    private var image by mutableStateOf<Bitmap?>(null)
+    var image by mutableStateOf<Bitmap?>(null)
     // Detector + config
     private lateinit var obstacleDetector: ObstacleDetector
     private var modelConfig: ModelConfig? = null
@@ -78,7 +78,7 @@ class OnDetectionActivity : ComponentActivity(), ObstacleClassifier {
     private var inferenceTimeMs by mutableLongStateOf(0L)
     // AR SceneView (SceneView manages the AR session automatically)
     private lateinit var arSceneView: ARSceneView
-    private var latestFrame: Frame? = null
+    var latestFrame: Frame? = null
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -98,7 +98,7 @@ class OnDetectionActivity : ComponentActivity(), ObstacleClassifier {
                 session.configure(config)
             },
             onSessionUpdated = { session: Session, frame: Frame ->
-                // 🔹 Called every frame (~30-60 fps)
+                // Called every frame (~30-60 fps)
                 // Useful for depth, raycasting, or updating UI overlays
                 latestFrame = frame
             },
