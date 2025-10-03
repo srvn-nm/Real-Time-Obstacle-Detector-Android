@@ -118,7 +118,7 @@ class ObjectDetectionInstrumentationTest {
         val mockClassifier = mock<ObstacleClassifier>()
 
         // Iterates through all possible combinations of model, NNAPI usage, and HDR setting.
-        for (model in Models.entries) {
+        for (model in Models.values()) {
             for (useNNAPI in listOf(true, false)) {
                 for (isHdrEnabled in listOf(true, false)) {
                     Log.d("TestRunner", "Testing model: ${model.displayName} with NNAPI=$useNNAPI, HDR=$isHdrEnabled")
@@ -139,7 +139,6 @@ class ObjectDetectionInstrumentationTest {
                     for (imageFileName in testImages) {
                         val testImage = loadBitmapFromAssets(imageFileName)
 
-                        // Run detection on the image
                         var actualResults: List<ObjectDetectionResult>? = null
 
                         // Mockito's doAnswer is used to capture the actual detection results
@@ -165,7 +164,37 @@ class ObjectDetectionInstrumentationTest {
                             expectedResults!!.size,
                             actualResults!!.size
                         )
-                        // TODO: Add more fine-grained assertions (e.g., check className, confidence) here.
+
+                        // Fine-grained assertion: compare individual properties of the detected objects.
+                        // Sort both lists by class name and confidence to ensure reliable comparison,
+                        // as detection order is often unstable.
+                        val comparator = compareBy<ObjectDetectionResult> { it.className }
+                            .thenByDescending { it.confidenceRate }
+
+                        val sortedExpected = expectedResults.sortedWith(comparator)
+                        val sortedActual = actualResults!!.sortedWith(comparator)
+
+                        for (i in sortedExpected.indices) {
+                            val expected = sortedExpected[i]
+                            val actual = sortedActual[i]
+
+                            // Check class name
+                            assertEquals("Class name mismatch for detection #$i", expected.className, actual.className)
+
+                            // Check confidence rate (allowing a small tolerance for model fluctuations)
+                            assertEquals(
+                                "Confidence rate mismatch for detection #$i (${expected.className})",
+                                expected.confidenceRate,
+                                actual.confidenceRate,
+                                0.05f // Allowing 5% tolerance
+                            )
+
+                            // Check bounding box coordinates (allowing a small tolerance for coordinate float math)
+                            assertEquals("x1 mismatch for detection #$i (${expected.className})", expected.x1, actual.x1, 0.01f)
+                            assertEquals("y1 mismatch for detection #$i (${expected.className})", expected.y1, actual.y1, 0.01f)
+                            assertEquals("x2 mismatch for detection #$i (${expected.className})", expected.x2, actual.x2, 0.01f)
+                            assertEquals("y2 mismatch for detection #$i (${expected.className})", expected.y2, actual.y2, 0.01f)
+                        }
                     }
                 }
             }
