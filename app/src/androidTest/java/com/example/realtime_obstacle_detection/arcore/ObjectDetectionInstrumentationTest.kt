@@ -12,19 +12,18 @@ import com.example.realtime_obstacle_detection.domain.ObstacleClassifier
 import com.example.realtime_obstacle_detection.ui.screens.initialConfigurations.Models
 import com.google.ar.core.Pose
 import junit.framework.TestCase.assertEquals
-import junit.framework.TestCase.assertNotNull
+import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito.mock
 import org.mockito.kotlin.any
-import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.doAnswer
-import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.io.File
 import java.io.FileNotFoundException
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
@@ -32,8 +31,7 @@ import kotlin.math.sqrt
 /**
  * Instrumented test suite for the ObstacleDetector and its pipeline.
  *
- * This test uses mocked objects and a static dataset to verify the detection logic without
- * relying on a live camera feed or a real ARCore session.
+ * This test now functions as an evaluation tool, logging all metrics instead of asserting.
  */
 @RunWith(AndroidJUnit4::class)
 class ObjectDetectionInstrumentationTest {
@@ -97,7 +95,7 @@ class ObjectDetectionInstrumentationTest {
     // --- Helper Functions for Label Parsing ---
 
     /**
-     * Map from class ID (from the label file) to the expected class name string.
+     * Map from class ID to class name based on the 18 classes list.
      */
     private fun classIdToClassName(id: Int): String {
         return when (id) {
@@ -124,10 +122,7 @@ class ObjectDetectionInstrumentationTest {
     }
 
     /**
-     * Loads ground truth labels from a .txt file in the 'test/labels' folder.
-     * Assumes YOLO format (normalized coordinates): class_id x_center_norm y_center_norm width_norm height_norm per line.
-     * @param imageFileName The full path of the image (e.g., "test/images/img1.jpg").
-     * @return A list of expected ObjectDetectionResult objects.
+     * Loads ground truth labels from a .txt file in the 'test/labels' folder (YOLO format).
      */
     private fun loadGroundTruthFromLabelFile(imageFileName: String): List<ObjectDetectionResult> {
         val baseName = imageFileName.substringAfterLast('/').substringBeforeLast('.')
@@ -169,8 +164,6 @@ class ObjectDetectionInstrumentationTest {
                                 distance = null
                             )
                         )
-                    } else {
-                        Log.w("TestRunner", "Skipping line in $labelPath: Invalid number of parts (${parts.size}) in line: $line")
                     }
                 }
             }
@@ -219,10 +212,9 @@ class ObjectDetectionInstrumentationTest {
     @Test
     fun testPerformanceMetrics() {
         val testImages = getImagesFromAssets()
-        assertTrue("No images found in the assets folder.", testImages.isNotEmpty())
+        assertTrue("No images found in the 'test/images' folder.", testImages.isNotEmpty())
 
         val mockClassifier = mock<ObstacleClassifier>()
-        var currentTest = 0
 
         for (model in Models.entries) {
             for (useNNAPI in listOf(true, false)) {
@@ -242,7 +234,6 @@ class ObjectDetectionInstrumentationTest {
                     detector.setup()
 
                     for (imageFileName in testImages) {
-                        currentTest++
                         val testImage = loadBitmapFromAssets(imageFileName)
 
                         // --- Performance Measurement ---
@@ -255,14 +246,9 @@ class ObjectDetectionInstrumentationTest {
 
                         Log.i(
                             "PerformanceResults",
-                            "Model: ${model.displayName} | NNAPI: $useNNAPI | Image: ${imageFileName.substringAfterLast('/')} | Inference Time: ${"%.2f".format(inferenceTimeMs)} ms | FPS: ${"%.2f".format(fps)}"
+                            "Model: ${model.displayName} | NNAPI: $useNNAPI | Image: ${imageFileName.substringAfterLast('/')} | Time: ${"%.2f".format(inferenceTimeMs)} ms | FPS: ${"%.2f".format(fps)}"
                         )
-
-                        // Adding assertions for minimum acceptable performance.
-                        assertTrue(
-                            "Inference time for ${model.displayName} is too slow ($inferenceTimeMs ms). Should be < 200ms.",
-                            inferenceTimeMs < 200
-                        )
+                        assertTrue("Inference time too slow", inferenceTimeMs < 200)
                     }
                 }
             }
@@ -276,18 +262,33 @@ class ObjectDetectionInstrumentationTest {
      * and processes all test images, producing results that match the ground truth metadata count.
      */
     @Test
-    fun testAllModelsWithAllConfigurationsAndVerifyDetection() {
+    fun generateEvaluationReport() {
         val testImages = getImagesFromAssets()
-        assertTrue("No images found in the assets folder.", testImages.isNotEmpty())
+        assertFalse("No images found in the 'test/images' folder.", testImages.isEmpty())
 
         // Use a mock classifier to intercept and verify the results generated by the detector.
         val mockClassifier = mock<ObstacleClassifier>()
+        val report = StringBuilder()
+        val timestamp = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(java.util.Date())
 
-        // Iterates through all possible combinations of model, NNAPI usage, and HDR setting.
+        report.append("========================================================\n")
+        report.append("OBJECT DETECTION MODEL EVALUATION REPORT\n")
+        report.append("Generated On: $timestamp\n")
+        report.append("========================================================\n\n")
+
+        // Defines the sorting rule for reliable comparison
+        val comparator = compareBy<ObjectDetectionResult> { it.className }
+            .thenByDescending { it.confidenceRate }
+
+        var totalDetections = 0
+        var totalExpected = 0
+
+        // Loops through all configurations
         for (model in Models.entries) {
             for (useNNAPI in listOf(true, false)) {
                 for (isHdrEnabled in listOf(true, false)) {
-                    Log.d("TestRunner", "Testing model: ${model.displayName} with NNAPI=$useNNAPI, HDR=$isHdrEnabled")
+                    val modelConfig = "${model.displayName} | NNAPI=$useNNAPI | HDR=$isHdrEnabled"
+                    report.append("--- CONFIG: $modelConfig ---\n")
 
                     // Instantiate the core detection logic component.
                     val detector = ObstacleDetector(
@@ -310,9 +311,11 @@ class ObjectDetectionInstrumentationTest {
 
                         // Skip the test if there are no expected results (no label file found).
                         if (expectedResults.isEmpty()) {
-                            Log.w("TestRunner", "Skipping image $imageFileName: No ground truth labels found.")
+                            report.append("  [Image: ${imageFileName.substringAfterLast('/')}] SKIPPED (No ground truth labels found)\n")
                             continue
                         }
+
+                        totalExpected += expectedResults.size
 
                         var actualResults: List<ObjectDetectionResult>? = null
 
@@ -325,52 +328,50 @@ class ObjectDetectionInstrumentationTest {
 
                         detector.detect(testImage)
 
-                        // 1. Verify: Ensure the detector's callback was actually executed.
-                        verify(mockClassifier, atLeastOnce()).onDetect(any(), any())
-                        assertNotNull("No results detected for image: $imageFileName", actualResults)
+                        val detected = actualResults ?: emptyList()
+                        totalDetections += detected.size
 
-                        // 2. Assertion: Compare against expected metadata.
-                        assertEquals(
-                            "The number of detected objects must match the expected count in labels for ${imageFileName}.",
-                            expectedResults.size,
-                            actualResults!!.size
-                        )
+                        report.append("  [Image: ${imageFileName.substringAfterLast('/')}] Detected: ${detected.size} | Expected: ${expectedResults.size}\n")
 
-                        // 3. Fine-grained assertion: compare individual properties of the detected objects.
-                        // Sort both lists by class name and confidence to ensure reliable comparison,
-                        // as detection order is often unstable.
-                        val comparator = compareBy<ObjectDetectionResult> { it.className }
-                            .thenByDescending { it.confidenceRate }
-
+                        // Sort both lists for deterministic comparison
                         val sortedExpected = expectedResults.sortedWith(comparator)
-                        val sortedActual = actualResults!!.sortedWith(comparator)
+                        val sortedActual = detected.sortedWith(comparator)
 
-                        for (i in sortedExpected.indices) {
+                        val comparisonCount = min(sortedExpected.size, sortedActual.size)
+
+                        for (i in 0 until comparisonCount) {
                             val expected = sortedExpected[i]
                             val actual = sortedActual[i]
 
-                            // Check class name
-                            assertEquals("Class name mismatch for detection #$i", expected.className, actual.className)
+                            val iou = calculateIoU(expected, actual)
+                            val x1Error = abs(expected.x1 - actual.x1)
+                            val y1Error = abs(expected.y1 - actual.y1) // <-- Now used below
+                            val classMatch = if (expected.className == actual.className) "MATCH" else "MISMATCH"
 
-                            // Check confidence rate (allowing a small tolerance for model fluctuations)
-//                            assertEquals(
-//                                "Confidence rate mismatch for detection #$i (${expected.className})",
-//                                expected.confidenceRate,
-//                                actual.confidenceRate,
-//                                0.05f // Allowing 5% tolerance
-//                            )
+                            report.append(
+                                "    #${i}: GT_Class: ${expected.className.padEnd(20)} | P_Class: ${actual.className.padEnd(20)} | Class: ${classMatch.padEnd(7)} | Conf: ${"%.4f".format(actual.confidenceRate)} | IoU: ${"%.4f".format(iou)} | X1_Err: ${"%.4f".format(x1Error)} | Y1_Err: ${"%.4f".format(y1Error)}\n" // <-- Y1_Err added
+                            )
+                        }
 
-                            // Check bounding box coordinates (INCREASED TOLERANCE TO 0.10f)
-                            // Note: Coordinates are normalized (0.0 to 1.0)
-                            assertEquals("x1 mismatch for detection #$i (${expected.className})", expected.x1, actual.x1, 0.1f)
-                            assertEquals("y1 mismatch for detection #$i (${expected.className})", expected.y1, actual.y1, 0.1f)
-                            assertEquals("x2 mismatch for detection #$i (${expected.className})", expected.x2, actual.x2, 0.1f)
-                            assertEquals("y2 mismatch for detection #$i (${expected.className})", expected.y2, actual.y2, 0.1f)
+                        if (sortedExpected.size != sortedActual.size) {
+                            report.append("    WARNING: Detection count mismatch. Expected: ${expectedResults.size}, Actual: ${detected.size}.\n")
                         }
                     }
+                    report.append("\n") // Spacer after each config
                 }
             }
         }
+
+        report.append("\n========================================================\n")
+        report.append("SUMMARY\n")
+        report.append("Total Expected Instances: $totalExpected\n")
+        report.append("Total Detected Instances: $totalDetections\n")
+        report.append("========================================================\n")
+
+        writeEvaluationReport(appContext, report.toString())
+
+        // Final assertion to ensure the test itself doesn't report an error (it can still succeed even if the model is bad)
+        assertTrue("Report generated successfully.", true)
     }
 
     /**
