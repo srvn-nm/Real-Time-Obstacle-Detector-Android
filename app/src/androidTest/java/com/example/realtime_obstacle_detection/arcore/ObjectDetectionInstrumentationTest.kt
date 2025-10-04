@@ -57,12 +57,16 @@ class ObjectDetectionInstrumentationTest {
     }
 
     /**
-     * Helper function to get a list of all JPEG images from the assets folder.
+     * Helper function to get a list of all JPEG images from the new 'test/images' folder structure.
+     * The file names returned are relative to the assets root (e.g., "test/images/img1.jpg").
      * @return A list of file names that are potential test images.
      */
     private fun getImagesFromAssets(): List<String> {
-        return appContext.assets.list("")
+        // Look inside the 'test/images' folder in assets.
+        val imageFolder = "test/images"
+        return appContext.assets.list(imageFolder)
             ?.filter { it.endsWith(".jpg") || it.endsWith(".jpeg") }
+            ?.map { "$imageFolder/$it" } // Return full path relative to assets root
             ?: emptyList()
     }
 
@@ -99,9 +103,70 @@ class ObjectDetectionInstrumentationTest {
                     )
                 )
             }
+            // Store results with just the image file name as the key (e.g., "img1.jpg")
             metadata[key] = results
         }
         return metadata
+    }
+
+    // --- Performance Test ---
+
+    /**
+     * Tests the inference speed of the detector across all models and configurations.
+     * This test focuses on **performance metrics (inference time, FPS)** rather than detection accuracy.
+     */
+    @Test
+    fun testPerformanceMetrics() {
+        val testImages = getImagesFromAssets()
+        assertTrue("No images found in the assets folder.", testImages.isNotEmpty())
+
+        val mockClassifier = mock<ObstacleClassifier>()
+        val totalTestCount = Models.entries.size * 2 * 2 * testImages.size
+        var currentTest = 0
+
+        for (model in Models.entries) {
+            for (useNNAPI in listOf(true, false)) {
+                for (isHdrEnabled in listOf(true, false)) { // This flag doesn't directly affect inference time but is kept for comprehensive testing.
+                    Log.d("PerformanceTest", "Testing performance: ${model.displayName} with NNAPI=$useNNAPI")
+
+                    val detector = ObstacleDetector(
+                        context = appContext,
+                        obstacleClassifier = mockClassifier,
+                        modelPath = model.modelFileName,
+                        labelPath = model.labelFileName,
+                        confidenceThreshold = 0.5f,
+                        iouThreshold = 0.5f,
+                        threadsCount = 4,
+                        useNNAPI = useNNAPI
+                    )
+                    detector.setup()
+
+                    for (imageFileName in testImages) {
+                        currentTest++
+                        val testImage = loadBitmapFromAssets(imageFileName)
+
+                        // --- Performance Measurement ---
+                        val startTime = System.nanoTime()
+                        detector.detect(testImage)
+                        val endTime = System.nanoTime()
+
+                        val inferenceTimeMs = (endTime - startTime) / 1_000_000.0 // Convert nanoseconds to milliseconds
+                        val fps = 1000.0 / inferenceTimeMs // Calculate Frames Per Second
+
+                        Log.i(
+                            "PerformanceResults",
+                            "Model: ${model.displayName} | NNAPI: $useNNAPI | Image: ${imageFileName.substringAfterLast('/')} | Inference Time: ${"%.2f".format(inferenceTimeMs)} ms | FPS: ${"%.2f".format(fps)}"
+                        )
+
+                        // Adding assertions for minimum acceptable performance.
+                        assertTrue(
+                            "Inference time for ${model.displayName} is too slow ($inferenceTimeMs ms). Should be < 200ms.",
+                            inferenceTimeMs < 200
+                        )
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -155,8 +220,10 @@ class ObjectDetectionInstrumentationTest {
                         assertNotNull("No results detected for image: $imageFileName", actualResults)
 
                         // 2. Verification: Compare against expected metadata.
-                        val expectedResults = metadata[imageFileName]
-                        assertNotNull("No metadata found for image: $imageFileName", expectedResults)
+                        // The key for metadata is just the file name (e.g., "img1.jpg")
+                        val keyFileName = imageFileName.substringAfterLast('/')
+                        val expectedResults = metadata[keyFileName]
+                        assertNotNull("No metadata found for image: $keyFileName", expectedResults)
 
                         // 3. Assertion: Compare the number of detected objects.
                         assertEquals(
