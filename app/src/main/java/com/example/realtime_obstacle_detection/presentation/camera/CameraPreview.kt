@@ -20,9 +20,9 @@ fun CameraPreview(
 
     //camera view, its not ready for jp so we should use AndroidView
     AndroidView(
-        factory = {
+        factory = { ctx ->
             //PreviewView is a part of the CameraX library in Android. It's a view that displays the camera's preview stream ...
-            PreviewView(it).apply {
+            PreviewView(ctx).apply {
                 this.controller = controller
                 controller.bindToLifecycle(lifecycleOwner)
             }

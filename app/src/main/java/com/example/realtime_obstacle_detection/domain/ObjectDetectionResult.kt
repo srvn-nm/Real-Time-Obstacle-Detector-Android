@@ -25,5 +25,5 @@ data class ObjectDetectionResult(
     val height: Float,
     val confidenceRate: Float,
     val className: String,
-    val distance : Float?
+    var distance : Float?
 )

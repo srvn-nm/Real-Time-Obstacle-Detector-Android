@@ -30,8 +30,16 @@ fun calculateDistance(className: String, objectHeightInPixels: Float, focalLengt
     val realHeightOfObjectInMM = REAL_WORLD_SIZES_MM[className.lowercase()] ?: return null
 
     // Implement the provided formula to calculate the distance to the object.
-    if (focalLengthInMM != null &&  sensorHeightInMM != null)
-       return (focalLengthInMM * realHeightOfObjectInMM * imageHeightInPixels) / (objectHeightInPixels * sensorHeightInMM)
+    if (focalLengthInMM != null &&  sensorHeightInMM != null) {
+        val distance = (focalLengthInMM * realHeightOfObjectInMM * imageHeightInPixels) /
+                (objectHeightInPixels * sensorHeightInMM)
+
+        Log.i(
+            "obstacle-distance",
+            "Object: $className | Distance: ${"%.2f".format(distance / 1000)} m (${distance.toInt()} mm)"
+        )
+        return distance
+    }
 
     Log.i("obstacle detector distance states rate", "focalLengthInMM : $focalLengthInMM imageHeightInPixels : $imageHeightInPixels objectHeightInPixels : $objectHeightInPixels sensorHeightInMM : $sensorHeightInMM")
     return null
