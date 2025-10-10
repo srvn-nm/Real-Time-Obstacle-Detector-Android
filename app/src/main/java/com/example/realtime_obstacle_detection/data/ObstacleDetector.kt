@@ -40,24 +40,28 @@ import androidx.core.graphics.scale
 class ObstacleDetector(
     private val context: Context,
     private val obstacleClassifier: ObstacleClassifier,
-    private val modelPath :String = "15Obstacles_yolov8_float32.tflite",
-    private val labelPath :String = "15Obstacles_labels.txt",
-    private val threadsCount :Int = 3,
-    private val useNNAPI : Boolean= true,
-    private val confidenceThreshold : Float = 0.35F,
-    private val iouThreshold : Float = 0.3F
-){
+    private val modelPath: String = "15Obstacles_yolov8_float32.tflite",
+    private val labelPath: String = "15Obstacles_labels.txt",
+    private val threadsCount: Int = 3,
+    private val useNNAPI: Boolean = true,
+    private val confidenceThreshold: Float = 0.35F,
+    private val iouThreshold: Float = 0.3F
+) {
 
     private var interpreter: Interpreter? = null
     private var labels = mutableListOf<String>()
-    private var imageProcessor : ImageProcessor? = null
-    private var  focalLength : Float?= null
-    private var  sensorHeight : Float?= null
+
+    //    private var imageProcessor : ImageProcessor? = null
+    private var focalLength: Float? = null
+    private var sensorHeight: Float? = null
 
     private var tensorWidth = 0
     private var tensorHeight = 0
     private var channelsCount = 0
     private var elementsCount = 0
+
+    // CRITICAL: Variable to store the required input type
+    private var inputDataType: DataType = DataType.FLOAT32
 
     /**
      * Initializes the object detection model by:
@@ -76,13 +80,16 @@ class ObstacleDetector(
         // Camera parameters setup
         focalLength = getFocalLength(context)
         sensorHeight = getCameraSensorInfo(context)?.height
-        Log.d("model setup and configuration", "camera information: focalLength,sensorHeight -> $focalLength,$sensorHeight")
+        Log.d(
+            "model setup and configuration",
+            "camera information: focalLength,sensorHeight -> $focalLength,$sensorHeight"
+        )
 
         // Image processing pipeline
-        imageProcessor = ImageProcessor.Builder()
-            .add(NormalizeOp( 0f, 255f))
-            .add(CastOp(DataType.FLOAT32))
-            .build()
+//        imageProcessor = ImageProcessor.Builder()
+//            .add(NormalizeOp( 0f, 255f))
+//            .add(CastOp(DataType.FLOAT32))
+//            .build()
 
         Log.d("model setup and configuration", "image processor ...")
 
@@ -101,6 +108,7 @@ class ObstacleDetector(
         interpreter = Interpreter(model, options)
 
         // Tensor dimensions
+        val inputTensor = interpreter?.getInputTensor(0) ?: return
         val inputShape = interpreter?.getInputTensor(0)?.shape() ?: return
         val outputShape = interpreter?.getOutputTensor(0)?.shape() ?: return
 
@@ -109,6 +117,8 @@ class ObstacleDetector(
         channelsCount = outputShape[1]
         elementsCount = outputShape[2]
 
+        // CRITICAL: Extract and store the model's required input data type
+        inputDataType = inputTensor.dataType()
         Log.d("model setup and configuration", "interpreter and its configurations ...")
 
         try {
@@ -124,7 +134,7 @@ class ObstacleDetector(
      * Each line in the file represents a class name used in the model output.
      * Populates the `labels` list used for assigning names to detection results.
      */
-    private fun labelReader(){
+    private fun labelReader() {
         val inputStream: InputStream = context.assets.open(labelPath)
         val reader = BufferedReader(InputStreamReader(inputStream))
 
@@ -151,7 +161,7 @@ class ObstacleDetector(
      * @param image The bitmap image to analyze.
      */
 
-    fun detect(image: Bitmap){
+    fun detect(image: Bitmap) {
 
         var startTime = System.currentTimeMillis()
 
@@ -159,25 +169,56 @@ class ObstacleDetector(
 
         if (tensorWidth == 0 || tensorHeight == 0 || channelsCount == 0 || elementsCount == 0) return
 
+        // 1. Resize the input Bitmap
         //we should preprocess the bitmap before detection
         val resizedBitmap = image.scale(tensorWidth, tensorHeight, false)
 
 
-        val tensorImage = TensorImage(DataType.FLOAT32)
+        // 2. Prepare TensorImage using the model's required input type (FLOAT32 or UINT8/INT8)
+        val tensorImage = TensorImage(inputDataType)
         tensorImage.load(resizedBitmap)
 
-        val processedImage = imageProcessor!!
-            .process(tensorImage)
-        val imageBuffer = processedImage.buffer
+//        val processedImage = imageProcessor!!
+//            .process(tensorImage)
+//        val imageBuffer = processedImage.buffer
+        val processorBuilder = ImageProcessor.Builder()
+
+        when (inputDataType) {
+            DataType.FLOAT32 -> {
+                Log.d("ObstacleDetector", "Processing as FLOAT32 (Normalized).")
+                processorBuilder
+                    .add(NormalizeOp(0f, 255f)) // Normalize 0-255 to 0.0-1.0
+                    .add(CastOp(DataType.FLOAT32))
+            }
+            DataType.UINT8, DataType.INT8 -> {
+                Log.d("ObstacleDetector", "Processing as 8-bit (No Normalization).")
+                // CRITICAL FIX: Explicitly cast to the target integer type.
+                // This forces the TFLite library to structure the final ByteBuffer correctly.
+                processorBuilder.add(CastOp(inputDataType))
+            }
+            else -> {
+                Log.e("ObstacleDetector", "Unsupported TFLite input data type: $inputDataType. Cannot run inference.")
+                return
+            }
+        }
+
+        val imageProcessor = processorBuilder.build()
+        val imageBuffer = imageProcessor.process(tensorImage).buffer
 
 
-        val output = TensorBuffer.createFixedSize(intArrayOf(1 , channelsCount, elementsCount), DataType.FLOAT32)
+        val output = TensorBuffer.createFixedSize(
+            intArrayOf(1, channelsCount, elementsCount),
+            DataType.FLOAT32
+        )
 
         var endTime = System.currentTimeMillis()
 
         var duration = (endTime - startTime) / 1000.0
 
-        Log.d("processing time", "preparation of imageprocessor and fundamental variables took $duration seconds")
+        Log.d(
+            "processing time",
+            "preparation of imageprocessor and fundamental variables took $duration seconds"
+        )
 
         startTime = System.currentTimeMillis()
         interpreter?.run(imageBuffer, output.buffer)
@@ -201,7 +242,10 @@ class ObstacleDetector(
         endTime = System.currentTimeMillis()
 
         duration = (endTime - startTime) / 1000.0
-        Log.d("processing time", "bounding box and distance calculation and saving operations took $duration seconds")
+        Log.d(
+            "processing time",
+            "bounding box and distance calculation and saving operations took $duration seconds"
+        )
 
     }
 
@@ -217,7 +261,7 @@ class ObstacleDetector(
      * @param array The flattened float array output of the TFLite model.
      * @return A list of `ObjectDetectionResult`, or null if no valid detections.
      */
-    private fun bestBox(array: FloatArray) : List<ObjectDetectionResult>? {
+    private fun bestBox(array: FloatArray): List<ObjectDetectionResult>? {
 
         val startTime = System.currentTimeMillis()
         val objectDetectionResults = mutableListOf<ObjectDetectionResult>()
@@ -227,7 +271,7 @@ class ObstacleDetector(
             var maxIdx = -1
             var j = 4
             var arrayIdx = classIndex + elementsCount * j
-            while (j < channelsCount){
+            while (j < channelsCount) {
                 if (array[arrayIdx] > maxConf) {
                     maxConf = array[arrayIdx]
                     maxIdx = j - 4
@@ -242,16 +286,16 @@ class ObstacleDetector(
                 val cy = array[classIndex + elementsCount]
                 val width = array[classIndex + elementsCount * 2]
                 val height = array[classIndex + elementsCount * 3]
-                val x1 = cx - (width/2F)
-                val y1 = cy - (height/2F)
-                val x2 = cx + (width/2F)
-                val y2 = cy + (height/2F)
+                val x1 = cx - (width / 2F)
+                val y1 = cy - (height / 2F)
+                val x2 = cx + (width / 2F)
+                val y2 = cy + (height / 2F)
 
                 val distance = calculateDistance(
-                    className= clsName,
-                    objectHeightInPixels= height * tensorHeight,
-                    focalLengthInMM=focalLength,
-                    imageHeightInPixels=tensorHeight.toFloat(),
+                    className = clsName,
+                    objectHeightInPixels = height * tensorHeight,
+                    focalLengthInMM = focalLength,
+                    imageHeightInPixels = tensorHeight.toFloat(),
                     sensorHeightInMM = sensorHeight
                 )
 
@@ -283,7 +327,10 @@ class ObstacleDetector(
         val endTime = System.currentTimeMillis()
 
         val duration = (endTime - startTime) / 1000.0
-        Log.d("processing time", "finding the bounding box and saving operations took $duration seconds")
+        Log.d(
+            "processing time",
+            "finding the bounding box and saving operations took $duration seconds"
+        )
 
         if (objectDetectionResults.isEmpty())
             return null
@@ -298,7 +345,7 @@ class ObstacleDetector(
      * @param boxes List of all raw detection results.
      * @return A filtered list with non-overlapping detection boxes.
      */
-    private fun applyNMS(boxes: List<ObjectDetectionResult>) : MutableList<ObjectDetectionResult> {
+    private fun applyNMS(boxes: List<ObjectDetectionResult>): MutableList<ObjectDetectionResult> {
 
         val selectedBoxes = mutableListOf<ObjectDetectionResult>()
 
@@ -306,7 +353,7 @@ class ObstacleDetector(
             it.confidenceRate
         }.toMutableList()
 
-        while(sortedBoxes.isNotEmpty()) {
+        while (sortedBoxes.isNotEmpty()) {
             val first = sortedBoxes.first()
             selectedBoxes.add(first)
             sortedBoxes.remove(first)
