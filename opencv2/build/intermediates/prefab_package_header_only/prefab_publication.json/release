@@ -1,0 +1,17 @@
+{
+  "installationFolder": "D:\\Abtin\u0027sPaper\\Abtinz-AUT-Bsc-Finall-Project-Android\\opencv2\\build\\intermediates\\prefab_package\\release\\prefab",
+  "gradlePath": ":opencv2",
+  "packageInfo": {
+    "packageName": "opencv2",
+    "packageSchemaVersion": 2,
+    "packageDependencies": [],
+    "modules": [
+      {
+        "moduleName": "opencv_jni_shared",
+        "moduleHeaders": "D:\\Abtin\u0027sPaper\\Abtinz-AUT-Bsc-Finall-Project-Android\\opencv2\\native\\jni\\include",
+        "moduleExportLibraries": [],
+        "abis": []
+      }
+    ]
+  }
+}
