@@ -214,6 +214,7 @@ class BlindDetectorActivity : ComponentActivity(), ObstacleClassifier, TextToSpe
         textToSpeech?.stop()
         textToSpeech?.shutdown()
         super.onDestroy()
+        obstacleDetector.close() // Release TFLite resources
     }
 
     private fun speak(text: String) {
