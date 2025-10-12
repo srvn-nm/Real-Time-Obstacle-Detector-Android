@@ -244,4 +244,9 @@ class WalkAroundActivity : ComponentActivity(), ObstacleClassifier {
         Log.i("obstacle detector", "No object has been detected yet")
         showAlert = false
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        obstacleDetector.close() // Release TFLite resources
+    }
 }

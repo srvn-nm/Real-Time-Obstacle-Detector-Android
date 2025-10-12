@@ -14,3 +14,16 @@
 .cxx
 local.properties
 /.kotlin/errors/
+# Files/Directories to Ignore
+
+# Specified in the prompt:
+app/src/main/assets/
+opencv2/.cxx/
+.gradle/
+.idea/
+local.properties
+
+# Good practice additions (often go with the above):
+build/
+.kotlin/
+*.iml
