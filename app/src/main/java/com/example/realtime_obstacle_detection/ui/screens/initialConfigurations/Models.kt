@@ -22,14 +22,14 @@ enum class Models(
     val modelFileName: String,
     val labelFileName: String
 ) {
-    //YoloV8 - 18 Obstacles ------------------------------------------------------------------------
+    // YoloV8 - 18 Obstacles ------------------------------------------------------------------------
     YOLO8_18_OBSTACLE_FP16BIT(
-        "18 Obstacles YOLOv FP16",
+        "18 Obstacles YOLOv8 FP16",
         "18Obstacles_yolov8_float16.tflite",
         "18Obstacles_labels.txt"
     ),
     YOLO8_18_OBSTACLE_FP32BIT(
-        "18 Obstacles YOLOv FP32",
+        "18 Obstacles YOLOv8 FP32",
         "18Obstacles_yolov8_float32.tflite",
         "18Obstacles_labels.txt"
     ),
@@ -49,7 +49,7 @@ enum class Models(
         "18Obstacles_labels.txt"
     ),
 
-    //YoloV12 - 18 Obstacles -----------------------------------------------------------------------
+    // YoloV12 - 18 Obstacles -----------------------------------------------------------------------
     YOLO12_18_OBSTACLE_FP16BIT(
         "18 Obstacles YOLOv12 FP16",
         "18Obstacles_yolov12_float16.tflite",
@@ -60,44 +60,49 @@ enum class Models(
         "18Obstacles_yolov12_float32.tflite",
         "18Obstacles_labels.txt"
     ),
-    
-    //15 Obstacles - YoloV8  -----------------------------------------------------------------------
-    
-    BEST_FLOAT16(
-        "Best Float16",
-        "15Obstacles_yolov8_float16.tflite",
-        "15Obstacles_labels.txt"
+
+    // EE_Backbone + Neck Variants -------------------------------------------------------------------
+    EE_BACKBONE_NECK_FP16(
+        "EE Backbone + Neck FP16",
+        "EE_Backbone_Neck_float16.tflite",
+        "18Obstacles_labels.txt"
     ),
-    BEST_FLOAT32(
-        "Best Float32",
-        "15Obstacles_yolov8_float32.tflite",
-        "15Obstacles_labels.txt"
+    EE_BACKBONE_NECK_FP32(
+        "EE Backbone + Neck FP32",
+        "EE_Backbone_Neck_float32.tflite",
+        "18Obstacles_labels.txt"
     ),
-    BEST_FULL_INTEGER(
-        "Best Full Integer Quant",
-        "15Obstacles_yolov8_full_integer_quant.tflite",
-        "15Obstacles_labels.txt"
-    ),
-    BEST_INT8(
-        "Best INT8",
-        "15Obstacles_yolov8_int8.tflite",
-        "15Obstacles_labels.txt"
-    ),
-    BEST_INTEGER_QUANT(
-        "Best Integer Quant",
-        "15Obstacles_yolov8_integer_quant.tflite",
-        "15Obstacles_labels.txt"
+    EE_BACKBONE_NECK_INT8(
+        "EE Backbone + Neck INT8",
+        "EE_Backbone_Neck_int8.tflite",
+        "18Obstacles_labels.txt"
     ),
 
-    //YoloV8 (Original Model)  ---------------------------------------------------------------------
+    // EE_Backbone Only Variants ---------------------------------------------------------------------
+    EE_BACKBONE_ONLY_FP16(
+        "EE Backbone Only FP16",
+        "EE_Backbone_only_float16.tflite",
+        "18Obstacles_labels.txt"
+    ),
+    EE_BACKBONE_ONLY_INT8(
+        "EE Backbone Only INT8",
+        "EE_Backbone_only_int8.tflite",
+        "18Obstacles_labels.txt"
+    ),
+    EE_BACKBONEONLY_FP32(
+        "EE BackboneOnly FP32",
+        "EE_Backboneonly_float32.tflite",
+        "18Obstacles_labels.txt"
+    ),
 
+    // YOLOv8 (Original Model) -----------------------------------------------------------------------
     YOLOV8_FLOAT32(
         "YOLOv8 Float32",
         "yoloV8_float32.tflite",
         "yoloV8_labels.txt"
     );
 
-    /**Default model used across the application when no specific model is selected. */
+    /** Default model used across the application when no specific model is selected. */
     companion object {
         val DEFAULT = YOLO8_18_OBSTACLE_FP32BIT
     }

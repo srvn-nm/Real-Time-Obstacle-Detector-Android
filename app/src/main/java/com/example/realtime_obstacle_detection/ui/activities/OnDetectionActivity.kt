@@ -329,4 +329,9 @@ class OnDetectionActivity : ComponentActivity(), ObstacleClassifier {
         image = null
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        obstacleDetector.close() // Release TFLite resources
+    }
+
 }

@@ -51,7 +51,11 @@ class ObstacleDetector(
     private var interpreter: Interpreter? = null
     private var labels = mutableListOf<String>()
 
-    //    private var imageProcessor : ImageProcessor? = null
+    // Declare I/O objects as nullable properties
+    private var imageProcessor: ImageProcessor? = null
+    private var inputTensor: TensorImage? = null
+    private var outputTensor: TensorBuffer? = null
+
     private var focalLength: Float? = null
     private var sensorHeight: Float? = null
 
@@ -60,7 +64,7 @@ class ObstacleDetector(
     private var channelsCount = 0
     private var elementsCount = 0
 
-    // CRITICAL: Variable to store the required input type
+    // Variable to store the required input type
     private var inputDataType: DataType = DataType.FLOAT32
 
     /**
@@ -108,7 +112,7 @@ class ObstacleDetector(
         interpreter = Interpreter(model, options)
 
         // Tensor dimensions
-        val inputTensor = interpreter?.getInputTensor(0) ?: return
+        val inputTensor2 = interpreter?.getInputTensor(0) ?: return
         val inputShape = interpreter?.getInputTensor(0)?.shape() ?: return
         val outputShape = interpreter?.getOutputTensor(0)?.shape() ?: return
 
@@ -117,9 +121,31 @@ class ObstacleDetector(
         channelsCount = outputShape[1]
         elementsCount = outputShape[2]
 
-        // CRITICAL: Extract and store the model's required input data type
-        inputDataType = inputTensor.dataType()
+        // Extract and store the model's required input data type
+        inputDataType = inputTensor2.dataType()
         Log.d("model setup and configuration", "interpreter and its configurations ...")
+
+        // 1. Initialize reusable input and output buffers
+        inputTensor = TensorImage(inputDataType)
+        outputTensor = TensorBuffer.createFixedSize(
+            intArrayOf(1, channelsCount, elementsCount),
+            DataType.FLOAT32
+        )
+
+        // 2. Initialize reusable ImageProcessor
+        val processorBuilder = ImageProcessor.Builder()
+        when (inputDataType) {
+            DataType.FLOAT32 -> {
+                processorBuilder
+                    .add(NormalizeOp(0f, 255f))
+                    .add(CastOp(DataType.FLOAT32))
+            }
+            DataType.UINT8, DataType.INT8 -> {
+                processorBuilder.add(CastOp(inputDataType))
+            }
+            else -> Log.e("ObstacleDetector", "Unsupported TFLite input data type: $inputDataType")
+        }
+        imageProcessor = processorBuilder.build() // Build processor once!
 
         try {
             labelReader()
@@ -247,6 +273,16 @@ class ObstacleDetector(
             "bounding box and distance calculation and saving operations took $duration seconds"
         )
 
+    }
+
+    /**
+     * CRITICAL FIX: Releases all resources associated with the TFLite Interpreter.
+     * Must be called when the detector is no longer needed (e.g., in Activity.onDestroy() or Test @After).
+     */
+    fun close() {
+        interpreter?.close()
+        interpreter = null
+        Log.d("ObstacleDetector", "TFLite Interpreter closed and released native memory.")
     }
 
     /**
