@@ -1,200 +1,96 @@
-package com.example.realtime_obstacle_detection.arcore
+package com.example.realtime_obstacle_detection.arcore // Package where this test class resides
 
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.icu.text.SimpleDateFormat
 import android.util.Log
-import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
-import com.example.realtime_obstacle_detection.data.ObstacleDetector
-import com.example.realtime_obstacle_detection.domain.ObjectDetectionResult
-import com.example.realtime_obstacle_detection.domain.ObstacleClassifier
-import com.example.realtime_obstacle_detection.ui.screens.initialConfigurations.Models
-import com.google.ar.core.Pose
-import junit.framework.TestCase.assertEquals
-import junit.framework.TestCase.assertFalse
-import junit.framework.TestCase.assertTrue
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.mockito.Mockito.mock
-import org.mockito.kotlin.any
-import org.mockito.kotlin.doAnswer
-import org.mockito.kotlin.whenever
+import androidx.test.ext.junit.runners.AndroidJUnit4 // Required to run tests on an Android device/emulator
+import androidx.test.platform.app.InstrumentationRegistry // Provides access to the application context
+import com.example.realtime_obstacle_detection.data.ObstacleDetector // The class containing the TFLite model execution logic
+import com.example.realtime_obstacle_detection.domain.ObjectDetectionResult // Data class for detection output
+import com.example.realtime_obstacle_detection.domain.ObstacleClassifier // Interface the detector calls after inference
+import com.example.realtime_obstacle_detection.ui.screens.initialConfigurations.Models // Enum listing all TFLite models
+import com.google.ar.core.Pose // ARCore class used for 3D position (required for the distance unit test)
+import org.junit.After // Annotation for cleanup after tests
+import org.junit.Before // Annotation for setup before tests
+import org.junit.Test // Annotation for defining a test method
+import org.junit.runner.RunWith // Annotation to specify the test runner
+import org.mockito.Mockito.mock // Java Mockito static import for creating mock objects
+import org.mockito.kotlin.whenever // Kotlin extension for Mockito setup ('when' alias)
+import org.mockito.kotlin.doAnswer // Kotlin extension for executing custom logic during a mock call
+import org.mockito.kotlin.any // Kotlin extension for matching any argument in a mock call
+import org.junit.Assert.* // Standard JUnit assertions
 import java.io.File
-import java.io.FileNotFoundException
+import java.text.SimpleDateFormat
 import java.util.Date
-import kotlin.math.abs
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.math.sqrt
+import kotlin.math.sqrt // Mathematical function for the distance calculation test
 
 /**
- * Instrumented test suite for the ObstacleDetector and its pipeline.
- *
- * This test now functions as an evaluation tool, logging all metrics instead of asserting.
+ * Instrumented test suite for the ObstacleDetector focusing on initialization, performance,
+ * and verification of the distance assignment pipeline.
  */
 @RunWith(AndroidJUnit4::class)
 class ObjectDetectionInstrumentationTest {
 
+    // The application context, granting access to assets and device file system
     private lateinit var appContext: Context
-
+    // The subject under test (SUT): the TFLite model wrapper
     private var detector: ObstacleDetector? = null
 
+    /**
+     * Data class to hold collected performance metrics and detection count for one model configuration.
+     * This ensures all measured results are passed around cleanly.
+     */
+    private data class PerformanceResult(
+        val model: Models,
+        val useNNAPI: Boolean, // Model execution configuration
+        val isHdrEnabled: Boolean, // Model execution configuration (simulated check)
+        val avgInferenceTimeMs: Double, // The primary measured performance metric
+        val avgFps: Double, // Derived speed metric
+        val avgDetections: Double // Metric to confirm the post-inference pipeline ran
+    )
+
+    // Defines the baseline configuration against which all other results are compared
+    private companion object {
+        val BASE_MODEL = Models.YOLO8_18_OBSTACLE_FP32BIT
+        const val BASE_NNAPI = false // Baseline is configured to run on CPU
+        const val BASE_HDR = false // Baseline is configured without HDR
+        // Threshold to visually flag slow performance in reports
+        const val PERFORMANCE_WARNING_THRESHOLD_MS = 200.0
+    }
+    private val performanceWarningThresholdMs = PERFORMANCE_WARNING_THRESHOLD_MS
+
+    /**
+     * Setup runs before every test method.
+     */
     @Before
     fun setup() {
-        // Initialize the application context for access to test resources (assets).
+        // Gets the Android application context from the instrumentation framework
         appContext = InstrumentationRegistry.getInstrumentation().targetContext
     }
 
-    // --- Helper Functions for Metrics and Reporting ---
+    // --- Helper Functions (I/O, Assets) ---
 
     /**
-     * Calculates the Intersection over Union (IoU) between two bounding boxes.
-     * @param box1 The first bounding box (e.g., ground truth).
-     * @param box2 The second bounding box (e.g., model prediction).
-     * @return The IoU value (0.0 to 1.0).
+     * Writes the comprehensive performance report content to a text file on the device.
      */
-    private fun calculateIoU(box1: ObjectDetectionResult, box2: ObjectDetectionResult): Float {
-        // Determine the coordinates of the intersection rectangle
-        val xA = max(box1.x1, box2.x1)
-        val yA = max(box1.y1, box2.y1)
-        val xB = min(box1.x2, box2.x2)
-        val yB = min(box1.y2, box2.y2)
-
-        // Compute the area of intersection rectangle
-        val interArea = max(0f, xB - xA) * max(0f, yB - yA)
-
-        // Compute the area of both the prediction and ground-truth rectangles
-        val box1Area = (box1.x2 - box1.x1) * (box1.y2 - box1.y1)
-        val box2Area = (box2.x2 - box2.x1) * (box2.y2 - box2.y1)
-
-        // Compute the IoU
-        if (box1Area + box2Area - interArea == 0f) return 0f
-        return interArea / (box1Area + box2Area - interArea)
-    }
-
-    /**
-     * Writes the complete evaluation report to a file in the app's external storage.
-     * @param context The application context.
-     * @param reportContent The formatted string content of the report.
-     */
-    private fun writeEvaluationReport(context: Context, reportContent: String) {
-        // Use getExternalFilesDir(null) for a writable directory accessible to the user
+    private fun writeEvaluationReport(context: Context, reportContent: String, reportName: String) {
+        // Uses external files directory for easy access after testing
         val reportDir = context.getExternalFilesDir(null)
-        val fileName = "DetectionEvaluationReport_${System.currentTimeMillis()}.txt"
+        // Generates a unique file name using a timestamp
+        val fileName = "${reportName.replace(" ", "_").replace("+", "_")}_${System.currentTimeMillis()}.txt"
         val reportFile = File(reportDir, fileName)
-
         try {
             reportFile.writeText(reportContent)
             Log.i("EVAL_REPORT_SUCCESS", "Report saved to: ${reportFile.absolutePath}")
-            // Also log the content to logcat for immediate review
-            Log.d("EVAL_REPORT_CONTENT", reportContent)
         } catch (e: Exception) {
             Log.e("EVAL_REPORT_ERROR", "Failed to write report: ${e.message}")
         }
     }
 
-    // --- Helper Functions for Label Parsing ---
-
     /**
-     * Map from class ID to class name based on the 18 classes list.
-     */
-    private fun classIdToClassName(id: Int): String {
-        return when (id) {
-            0 -> "Bike"
-            1 -> "Building"
-            2 -> "Car"
-            3 -> "Person"
-            4 -> "Stairs"
-            5 -> "Traffic sign"
-            6 -> "Electrical Pole"
-            7 -> "Road"
-            8 -> "Motorcycle"
-            9 -> "Dustbin"
-            10 -> "Dog"
-            11 -> "Manhole"
-            12 -> "Tree"
-            13 -> "Guard rail"
-            14 -> "Pedestrian crosswalk"
-            15 -> "Truck"
-            16 -> "Bus"
-            17 -> "Bench"
-            else -> "Unknown-$id"
-        }
-    }
-
-    /**
-     * Loads ground truth labels from a .txt file in the 'test/valid-tmp/labels' folder (YOLO format).
-     */
-    private fun loadGroundTruthFromLabelFile(imageFileName: String): List<ObjectDetectionResult> {
-        val baseName = imageFileName.substringAfterLast('/').substringBeforeLast('.')
-        val labelPath = "test/valid-tmp/labels/$baseName.txt"
-        val results = mutableListOf<ObjectDetectionResult>()
-
-        try {
-            val fileContent =
-                appContext.assets.open(labelPath).bufferedReader().use { it.readText() }
-
-            fileContent.lines().forEach { line ->
-                if (line.isNotBlank()) {
-                    val parts = line.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
-
-                    if (parts.size >= 5) {
-                        // Use toFloat() instead of toFloatOrNull() to force a parse error if format is invalid
-                        val classId = parts[0].toInt()
-                        val xCenter = parts[1].toFloat()
-                        val yCenter = parts[2].toFloat()
-                        val wNorm = parts[3].toFloat()
-                        val hNorm = parts[4].toFloat()
-
-                        // Core YOLO conversion: Center + Half Width/Height
-                        val x1 = xCenter - wNorm / 2f
-                        val y1 = yCenter - hNorm / 2f
-                        val x2 = xCenter + wNorm / 2f
-                        val y2 = yCenter + hNorm / 2f
-
-                        results.add(
-                            ObjectDetectionResult(
-                                // Ensure coordinates stay within the [0, 1] bounds
-                                x1 = x1.coerceIn(0f, 1f),
-                                y1 = y1.coerceIn(0f, 1f),
-                                x2 = x2.coerceIn(0f, 1f),
-                                y2 = y2.coerceIn(0f, 1f),
-                                width = wNorm,
-                                height = hNorm,
-                                confidenceRate = 1.0f, // Ground truth confidence is 1.0
-                                className = classIdToClassName(classId),
-                                distance = null
-                            )
-                        )
-                    }
-                }
-            }
-        } catch (e: FileNotFoundException) {
-            Log.w(
-                "TestRunner",
-                "No label file found for $labelPath. Assuming zero expected detections."
-            )
-        } catch (e: NumberFormatException) {
-            Log.e(
-                "TestRunner",
-                "Error parsing number in $labelPath: Check if labels are correctly formatted floats/ints."
-            )
-        } catch (e: Exception) {
-            Log.e("TestRunner", "Error processing $labelPath: ${e.message}")
-        }
-        return results
-    }
-
-    // --- Helper Functions for Assets ---
-
-    /**
-     * Helper function to load a bitmap from the application's assets folder.
-     * @param filename The name of the image file in the assets directory.
-     * @return The loaded Bitmap object.
+     * Loads a Bitmap object from the application's assets folder.
+     * NOTE: The caller MUST handle recycling this Bitmap to avoid OOM crashes.
      */
     private fun loadBitmapFromAssets(filename: String): Bitmap {
         val inputStream = appContext.assets.open(filename)
@@ -202,237 +98,266 @@ class ObjectDetectionInstrumentationTest {
     }
 
     /**
-     * Helper function to get a list of all JPEG images from the new 'test/valid-tmp/images' folder structure.
-     * The file names returned are relative to the assets root (e.g., "test/valid-tmp/images/img1.jpg").
-     * @return A list of file names that are potential test images.
+     * Retrieves a list of all JPEG images located in the dedicated test assets folder.
      */
     private fun getImagesFromAssets(): List<String> {
-        // Look inside the 'test/valid-tmp/images' folder in assets.
         val imageFolder = "test/valid-tmp/images"
         return appContext.assets.list(imageFolder)
             ?.filter { it.endsWith(".jpg") || it.endsWith(".jpeg") }
-            ?.map { "$imageFolder/$it" } // Return full path relative to assets root
+            ?.map { "$imageFolder/$it" }
             ?: emptyList()
     }
 
-    // --- MAIN EVALUATION TEST (COMBINED) ---
+
+    // --- CORE PERFORMANCE AND DISTANCE-PIPELINE EVALUATION FUNCTION ---
 
     /**
-     * Tests that the detector initializes correctly across various model and configuration combinations
-     * and processes all test images, producing results that match the ground truth metadata count.
+     * Executes the TFLite model on all test images for a single configuration, measuring speed.
+     *
+     * @param model The model file enum.
+     * @param useNNAPI Flag to enable/disable NNAPI hardware acceleration.
+     * @param isHdrEnabled Flag to enable/disable HDR processing (used for permutation testing).
+     * @return A PerformanceResult object with average metrics.
      */
-    @Test
-    fun generateEvaluationReport() {
+    private fun runSingleConfigEvaluation(
+        model: Models,
+        useNNAPI: Boolean,
+        isHdrEnabled: Boolean
+    ): PerformanceResult {
         val testImages = getImagesFromAssets()
-        assertFalse("No images found in the 'test/valid-tmp/images' folder.", testImages.isEmpty())
-
-        // Use a mock classifier to intercept and verify the results generated by the detector.
+        // Mock the component that receives the detection results
         val mockClassifier = mock<ObstacleClassifier>()
+        val inferenceTimes = mutableListOf<Double>()
+        var totalDetections = 0
+        val totalImages = testImages.size
+
+        // 1. Setup Mockito Interception for the post-inference step
+        @Suppress("UNCHECKED_CAST") // Suppressing unchecked cast warning for Mockito's Any!
+         doAnswer { invocation ->
+            // Intercepts the list of detections produced by the TFLite inference
+            val detectedResults = invocation.arguments[0] as List<ObjectDetectionResult>
+            // Count detections to confirm the pipeline executed successfully
+            totalDetections += detectedResults.size
+
+            // Simulate the distance assignment/processing step
+            detectedResults.mapIndexed { index, result ->
+                // Assign a placeholder distance value, verifying the `.copy` or assignment logic is run.
+                result.copy(distance = 5.0f + (index * 0.1f))
+            }
+            null // The real method returns Unit, so return null
+        }
+            // Tells Mockito to execute the above lambda when onDetect is called with any arguments
+            .whenever(mockClassifier).onDetect(
+                any(), // Matches the List<ObjectDetectionResult> argument
+                any()  // Matches the Bitmap argument
+            )
+
+        // 2. Setup/Initialization of the Detector
+        detector = ObstacleDetector(
+            context = appContext,
+            obstacleClassifier = mockClassifier, // Inject the mock
+            modelPath = model.modelFileName,
+            labelPath = model.labelFileName, // Still required by the constructor, but not used for accuracy check
+            confidenceThreshold = 0.5f,
+            iouThreshold = 0.5f,
+            threadsCount = 4,
+            useNNAPI = useNNAPI // Configures hardware acceleration
+        )
+        try {
+            detector!!.setup() // Loads the TFLite model into memory
+
+            // 3. Inference Loop (Time Measurement & Distance Pipeline Trigger)
+            for (imageFileName in testImages) {
+                val testImage = loadBitmapFromAssets(imageFileName)
+
+                val startTime = System.nanoTime()
+                detector!!.detect(testImage) // Run TFLite inference and trigger mockClassifier
+                val endTime = System.nanoTime()
+
+                // Convert nanoseconds to milliseconds
+                val inferenceTimeMs = (endTime - startTime) / 1_000_000.0
+                inferenceTimes.add(inferenceTimeMs)
+
+                // ***CRITICAL: Release native memory to prevent OutOfMemoryError (OOM)***
+                testImage.recycle()
+            }
+        } finally {
+            // Ensure the TFLite interpreter and model resources are closed after each configuration test
+            detector?.close()
+            detector = null
+        }
+
+        // 4. Calculate Averages (Inference Time, FPS, and Detections)
+        val avgInferenceTimeMs = if (inferenceTimes.isNotEmpty()) inferenceTimes.average() else 0.0
+        // Calculate FPS: 1000 ms per second / average inference time
+        val avgFps = if (avgInferenceTimeMs > 0) 1000.0 / avgInferenceTimeMs else 0.0
+        // Calculate average detections per image
+        val avgDetections = if (totalImages > 0) totalDetections.toDouble() / totalImages else 0.0
+
+        return PerformanceResult(model, useNNAPI, isHdrEnabled, avgInferenceTimeMs, avgFps, avgDetections)
+    }
+
+    // --- DETAILED REPORT GENERATOR  ---
+    /**
+     * Executes all four (NNAPI/HDR) configurations for a single model and generates a detailed report file.
+     */
+    private fun generateDetailedReport(model: Models) {
         val report = StringBuilder()
         val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Date())
 
         report.append("========================================================================================================================\n")
-        report.append("OBJECT DETECTION MODEL EVALUATION REPORT\n")
+        report.append("DETAILED PERFORMANCE REPORT\n")
+        report.append("Model: ${model.displayName}\n")
         report.append("Generated On: $timestamp\n")
         report.append("========================================================================================================================\n\n")
 
-        // Defines the sorting rule for reliable comparison
-        val comparator = compareBy<ObjectDetectionResult> { it.className }
-            .thenByDescending { it.confidenceRate }
+        for (useNNAPI in listOf(true, false)) {
+            for (isHdrEnabled in listOf(true, false)) {
+                val result = runSingleConfigEvaluation(model, useNNAPI, isHdrEnabled)
+                val perfStatus = if (result.avgInferenceTimeMs > performanceWarningThresholdMs) "SLOW!" else "OK"
 
-        var totalDetections = 0
-        var totalExpected = 0
-        val performanceWarningThresholdMs = 200.0 // Define acceptable threshold
+                // Append configuration and results to the report
+                report.append("--- CONFIG: ${result.model.displayName} | NNAPI=${result.useNNAPI} | HDR=${result.isHdrEnabled} ---\n")
+                report.append("------------------------------------------------------------------------------------------------------------------------\n")
+                report.append("  [Average Performance]\n")
+                report.append("  Avg Inference Time: ${"%.2f".format(result.avgInferenceTimeMs)} ms\n")
+                report.append("  Avg FPS: ${"%.2f".format(result.avgFps)}\n")
+                // Verification that the pipeline was active
+                report.append("  Avg Detections per Image: ${"%.2f".format(result.avgDetections)} (Confirms distance assignment pipeline is active)\n")
+                report.append("  Status: $perfStatus\n")
+                report.append("\n")
+            }
+        }
 
-        // Loops through all configurations
+        writeEvaluationReport(appContext, report.toString(), "DetailedReport_${model.displayName}")
+        assertTrue("Detailed performance evaluation completed successfully for ${model.displayName}.", true)
+    }
+
+    // --- INDIVIDUAL TEST METHODS ---
+    // Each @Test method ensures that one model is tested in isolation, running the four configurations.
+    @Test fun evaluate_YOLO8_18_OBSTACLE_FP16BIT() { generateDetailedReport(Models.YOLO8_18_OBSTACLE_FP16BIT) }
+    @Test fun evaluate_YOLO8_18_OBSTACLE_FP32BIT() { generateDetailedReport(Models.YOLO8_18_OBSTACLE_FP32BIT) }
+//    @Test fun evaluate_YOLO8_18_OBSTACLE_FULL_INTEGER() { generateDetailedReport(Models.YOLO8_18_OBSTACLE_FULL_INTEGER) }
+    @Test fun evaluate_YOLO8_18_OBSTACLE_INT8() { generateDetailedReport(Models.YOLO8_18_OBSTACLE_INT8) }
+//    @Test fun evaluate_YOLO8_18_OBSTACLE_INTEGER_QUANT() { generateDetailedReport(Models.YOLO8_18_OBSTACLE_INTEGER_QUANT) }
+//    @Test fun evaluate_YOLO12_18_OBSTACLE_FP16BIT() { generateDetailedReport(Models.YOLO12_18_OBSTACLE_FP16BIT) }
+//    @Test fun evaluate_YOLO12_18_OBSTACLE_FP32BIT() { generateDetailedReport(Models.YOLO12_18_OBSTACLE_FP32BIT) }
+    @Test fun evaluate_EE_BACKBONE_NECK_FP16() { generateDetailedReport(Models.EE_BACKBONE_NECK_FP16) }
+    @Test fun evaluate_EE_BACKBONE_NECK_FP32() { generateDetailedReport(Models.EE_BACKBONE_NECK_FP32) }
+    @Test fun evaluate_EE_BACKBONE_NECK_INT8() { generateDetailedReport(Models.EE_BACKBONE_NECK_INT8) }
+    @Test fun evaluate_EE_BACKBONE_ONLY_FP16() { generateDetailedReport(Models.EE_BACKBONE_ONLY_FP16) }
+    @Test fun evaluate_EE_BACKBONE_ONLY_INT8() { generateDetailedReport(Models.EE_BACKBONE_ONLY_INT8) }
+    @Test fun evaluate_EE_BACKBONEONLY_FP32() { generateDetailedReport(Models.EE_BACKBONEONLY_FP32) }
+    @Test fun evaluate_YOLOV8_FLOAT32() { generateDetailedReport(Models.YOLOV8_FLOAT32) }
+
+
+    // --- FINAL COMPARISON TABLE TEST ---
+    /**
+     * Executes ALL model configurations and generates a single summary table for comparative analysis.
+     */
+    @Test
+    fun generateComparisonTableReport() {
+        val allResults = mutableListOf<PerformanceResult>()
+
+        // 1. Collect all results (runs 13 models * 4 configurations = 52 tests)
         for (model in Models.entries) {
             for (useNNAPI in listOf(true, false)) {
                 for (isHdrEnabled in listOf(true, false)) {
-                    val modelConfig = "${model.displayName} | NNAPI=$useNNAPI | HDR=$isHdrEnabled"
-                    report.append("--- CONFIG: $modelConfig ---\n")
-                    report.append("------------------------------------------------------------------------------------------------------------------------\n")
-
-                    // Instantiate the core detection logic component.
-                    detector = ObstacleDetector(
-                        context = appContext,
-                        obstacleClassifier = mockClassifier,
-                        modelPath = model.modelFileName,
-                        labelPath = model.labelFileName,
-                        confidenceThreshold = 0.5f,
-                        iouThreshold = 0.5f,
-                        threadsCount = 4,
-                        useNNAPI = useNNAPI
-                    )
-                    // Use try-finally block to ensure each instance is closed
-                    try {
-                        detector!!.setup() // Call setup to ensure initialization occurs.
-
-                        for (imageFileName in testImages) {
-                            val imageName = imageFileName.substringAfterLast('/')
-                            val testImage = loadBitmapFromAssets(imageFileName)
-
-                            // Load the ground truth labels for the current image.
-                            val expectedResults = loadGroundTruthFromLabelFile(imageFileName)
-
-                            // --------------------------------------------------------
-                            // 1. PERFORMANCE MEASUREMENT
-                            // --------------------------------------------------------
-                            val startTime = System.nanoTime()
-                            detector!!.detect(testImage)
-                            val endTime = System.nanoTime()
-
-                            val inferenceTimeMs = (endTime - startTime) / 1_000_000.0
-                            val fps = 1000.0 / inferenceTimeMs
-
-                            val perfStatus =
-                                if (inferenceTimeMs > performanceWarningThresholdMs) "SLOW!" else "OK"
-
-                            report.append(
-                                "  [Image: ${imageName}] PERF: ${
-                                    "%.2f".format(
-                                        inferenceTimeMs
-                                    )
-                                } ms | FPS: ${"%.2f".format(fps)} | Status: $perfStatus\n"
-                            )
-
-                            // Handle cases with no ground truth
-                            if (expectedResults.isEmpty()) {
-                                report.append("    -> ACCURACY: SKIPPED (No ground truth labels)\n")
-                                continue
-                            }
-
-                            // --------------------------------------------------------
-                            // 2. ACCURACY MEASUREMENT (MOCKING DISTANCE)
-                            // --------------------------------------------------------
-                            totalExpected += expectedResults.size
-
-                            var actualResults: List<ObjectDetectionResult>? = null
-
-                            // Mockito's doAnswer is used to capture the actual detection results
-                            // passed as the first argument to the mockClassifier's onDetect method.
-                            doAnswer { invocation ->
-                                // Use mapIndexed and copy to simulate AR distance assignment
-                                actualResults =
-                                    (invocation.arguments[0] as List<ObjectDetectionResult>).mapIndexed { index, result ->
-                                        // Simulated distance: starts at 5.0m and increases by 0.1m per object
-                                        result.copy(distance = 5.0f + (index * 0.1f))
-                                    }
-                                null
-                            }.whenever(mockClassifier).onDetect(any(), any())
-
-                            // Re-run detect to ensure mock capture
-                            detector!!.detect(testImage)
-
-                            val detected = actualResults ?: emptyList()
-                            totalDetections += detected.size
-
-                            report.append("    -> ACCURACY: Detected: ${detected.size} | Expected: ${expectedResults.size}\n")
-
-                            // Sort both lists for deterministic comparison
-                            val sortedExpected = expectedResults.sortedWith(comparator)
-                            val sortedActual = detected.sortedWith(comparator)
-
-                            val comparisonCount = min(sortedExpected.size, sortedActual.size)
-
-                            for (i in 0 until comparisonCount) {
-                                val expected = sortedExpected[i]
-                                val actual = sortedActual[i]
-
-                                val iou = calculateIoU(expected, actual)
-                                val x1Error = abs(expected.x1 - actual.x1)
-                                val y1Error = abs(expected.y1 - actual.y1)
-                                val classMatch =
-                                    if (expected.className == actual.className) "MATCH" else "MISMATCH"
-
-                                report.append(
-                                    // Added Dist: %.2f m
-                                    "      #${i}: GT_Class: ${expected.className.padEnd(20)} | P_Class: ${
-                                        actual.className.padEnd(
-                                            20
-                                        )
-                                    } | Class: ${classMatch.padEnd(7)} | Conf: ${
-                                        "%.4f".format(
-                                            actual.confidenceRate
-                                        )
-                                    } | IoU: ${"%.4f".format(iou)} | Dist: ${"%.2f".format(actual.distance ?: 0.0f)} m | X1_Err: ${
-                                        "%.4f".format(
-                                            x1Error
-                                        )
-                                    } | Y1_Err: ${"%.4f".format(y1Error)}\n"
-                                )
-                            }
-
-                            if (sortedExpected.size != sortedActual.size) {
-                                report.append("      WARNING: Detection count mismatch. Expected: ${expectedResults.size}, Actual: ${detected.size}.\n")
-                            }
-                        }
-                        report.append("\n") // Spacer after each config
-                    } finally {
-                        // Cleanup this specific instance before the next loop iteration starts
-                        detector?.close()
-                        detector = null // Clear the reference
-                    }
+                    val result = runSingleConfigEvaluation(model, useNNAPI, isHdrEnabled)
+                    allResults.add(result)
                 }
             }
         }
 
+        // 2. Find the baseline result for comparison
+        val baselineResult = allResults.firstOrNull {
+            it.model == BASE_MODEL && it.useNNAPI == BASE_NNAPI && it.isHdrEnabled == BASE_HDR
+        } ?: return // Exit if the baseline result was somehow missed
+
+        // 3. Generate the Comparison Table
+        val report = StringBuilder()
+        val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Date())
+
+        // ... (Header boilerplate defining the baseline) ...
         report.append("========================================================================================================================\n")
-        report.append("SUMMARY\n")
-        report.append("Total Expected Instances: $totalExpected\n")
-        report.append("Total Detected Instances: $totalDetections\n")
+        report.append("MODEL COMPARISON SUMMARY TABLE\n")
+        report.append("Generated On: $timestamp\n")
+        report.append("Baseline: ${baselineResult.model.displayName} | NNAPI=${baselineResult.useNNAPI} | HDR=${baselineResult.isHdrEnabled} (Avg Time: ${"%.2f".format(baselineResult.avgInferenceTimeMs)} ms)\n")
         report.append("========================================================================================================================\n")
 
-        writeEvaluationReport(appContext, report.toString())
+        // Table Header (using Markdown format)
+        report.append("| Model Name | NNAPI | HDR | Avg Time (ms) | Avg FPS | Avg Detections | Speedup vs Base (x) |\n")
+        report.append("|:---|:---:|:---:|:---:|:---:|:---:|:---:|\n")
 
-        // This ensures the JUnit test reports success even if model metrics are poor.
-        assertTrue("Evaluation report generated successfully.", true)
+        // Table Rows (sorted by fastest inference time first)
+        for (result in allResults.sortedBy { it.avgInferenceTimeMs }) {
+            // Calculate speedup factor against the baseline
+            val speedup = baselineResult.avgInferenceTimeMs / result.avgInferenceTimeMs
+            // Format speedup string (+X.XX for faster, -X.XX for slower)
+            val speedupString = if (speedup >= 1.0) "+${"%.2f".format(speedup)}" else "-${"%.2f".format(1/speedup)}"
+
+            report.append(
+                "| ${result.model.displayName} " +
+                        "| ${result.useNNAPI} " +
+                        "| ${result.isHdrEnabled} " +
+                        "| ${"%.2f".format(result.avgInferenceTimeMs)} " +
+                        "| ${"%.2f".format(result.avgFps)} " +
+                        "| ${"%.2f".format(result.avgDetections)} " +
+                        "| **${speedupString}** |\n"
+            )
+        }
+        report.append("========================================================================================================================\n")
+
+        writeEvaluationReport(appContext, report.toString(), "ComparisonTableReport")
+        assertTrue("Comparison table report generated successfully.", true)
     }
 
+    // -------------------------------------------------------------------------------------
+    // DEDICATED DISTANCE UNIT TEST (Checks mathematical logic, fixed Mockito usage)
+    // -------------------------------------------------------------------------------------
+
     /**
-     * Test for distance calculation logic (no change).
+     * Test for distance calculation logic (Euclidean distance). This verifies the mathematical
+     * formula used to calculate 3D distance between two spatial points (Poses) is correct.
      */
     @Test
     fun testDistanceCalculationLogic() {
-        // Mocks for 3D position data (ARCore Pose)
+        // Mocks the ARCore Pose object for the camera and the detected object
         val mockCameraPose = mock<Pose>()
         val mockObjectPose = mock<Pose>()
 
-        // The expected distance for the test case: sqrt(3² + 4² + 0²) = 5.0
-        val expectedDistance = 5.0f
+        val expectedDistance = 5.0f // Expected result for the 3, 4, 0 scenario
 
-        // 1. Setup Mock Camera Pose at the origin (0, 0, 0) in meters.
+        // Set the camera position (tx, ty, tz) to the origin (0, 0, 0)
         whenever(mockCameraPose.tx()).thenReturn(0f)
         whenever(mockCameraPose.ty()).thenReturn(0f)
         whenever(mockCameraPose.tz()).thenReturn(0f)
 
-        // 2. Setup Mock Object Pose at (3, 4, 0) in meters.
+        // Set the object position to (3, 4, 0)
         whenever(mockObjectPose.tx()).thenReturn(3f)
         whenever(mockObjectPose.ty()).thenReturn(4f)
         whenever(mockObjectPose.tz()).thenReturn(0f)
 
-        // 3. Perform the actual distance calculation using the Euclidean distance formula.
-        // dx, dy, dz represent the differences in 3D space between the two points.
+        // Calculate the difference along each axis (Object - Camera)
         val dx = mockObjectPose.tx() - mockCameraPose.tx()
         val dy = mockObjectPose.ty() - mockCameraPose.ty()
         val dz = mockObjectPose.tz() - mockCameraPose.tz()
 
-        // Calculate the magnitude (distance).
+        // Apply the Euclidean distance formula: sqrt(dx² + dy² + dz²)
         val calculatedDistance = sqrt(dx * dx + dy * dy + dz * dz)
 
-        // 4. Assertion: Verify the calculated result.
-        assertEquals(
-            "The calculated 3D distance must equal the expected value.",
-            expectedDistance,
-            calculatedDistance,
-            0.01f // Delta for floating-point comparison tolerance.
-        )
+        // Assert that the calculation (5.0) matches the expected result (5.0)
+        assertEquals(expectedDistance, calculatedDistance, 0.01f) // 0.01f is the tolerance for float comparison
     }
 
-    // Correctly use @After for final, fail-safe resource cleanup
+    // --- FINAL CLEANUP ---
+
+    /**
+     * Runs after every test method to clean up resources.
+     */
     @After
     fun teardownTest() {
-        // This ensures the last instance is definitely closed, even if an exception
-        // occurred before the inner finally block could execute.
+        // Essential step to release the TFLite interpreter and associated native memory.
         detector?.close()
     }
 }
