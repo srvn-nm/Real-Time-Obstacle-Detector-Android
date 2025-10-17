@@ -3,6 +3,7 @@ package com.example.realtime_obstacle_detection.arcore // Package where this tes
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.Environment
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4 // Required to run tests on an Android device/emulator
 import androidx.test.platform.app.InstrumentationRegistry // Provides access to the application context
@@ -20,6 +21,8 @@ import org.mockito.kotlin.whenever // Kotlin extension for Mockito setup ('when'
 import org.mockito.kotlin.doAnswer // Kotlin extension for executing custom logic during a mock call
 import org.mockito.kotlin.any // Kotlin extension for matching any argument in a mock call
 import org.junit.Assert.* // Standard JUnit assertions
+import org.junit.FixMethodOrder
+import org.junit.runners.MethodSorters
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -28,8 +31,11 @@ import kotlin.math.sqrt // Mathematical function for the distance calculation te
 /**
  * Instrumented test suite for the ObstacleDetector focusing on initialization, performance,
  * and verification of the distance assignment pipeline.
+ *  @FixMethodOrder(MethodSorters.NAME_ASCENDING) ensures tests run in alphabetical order.
+ * The 'z_' prefix on the comparison report test ensures it runs last.
  */
 @RunWith(AndroidJUnit4::class)
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 class ObjectDetectionInstrumentationTest {
 
     // The application context, granting access to assets and device file system
@@ -74,9 +80,17 @@ class ObjectDetectionInstrumentationTest {
     /**
      * Writes the comprehensive performance report content to a text file on the device.
      */
-    private fun writeEvaluationReport(context: Context, reportContent: String, reportName: String) {
-        // Uses external files directory for easy access after testing
-        val reportDir = context.getExternalFilesDir(null)
+    private fun writeEvaluationReport(reportContent: String, reportName: String) {
+        // Get the public Downloads directory
+        val parentDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+
+        // Create the dedicated subfolder
+        val reportDir = File(parentDir, "ObstacleDetectionReports")
+
+        // Ensure the Downloads directory exists
+        if (!reportDir.exists()) {
+            reportDir.mkdirs()
+        }
         // Generates a unique file name using a timestamp
         val fileName = "${reportName.replace(" ", "_").replace("+", "_")}_${System.currentTimeMillis()}.txt"
         val reportFile = File(reportDir, fileName)
@@ -229,7 +243,7 @@ class ObjectDetectionInstrumentationTest {
             }
         }
 
-        writeEvaluationReport(appContext, report.toString(), "DetailedReport_${model.displayName}")
+        writeEvaluationReport(report.toString(), "DetailedReport_${model.displayName}")
         assertTrue("Detailed performance evaluation completed successfully for ${model.displayName}.", true)
     }
 
@@ -254,9 +268,10 @@ class ObjectDetectionInstrumentationTest {
     // --- FINAL COMPARISON TABLE TEST ---
     /**
      * Executes ALL model configurations and generates a single summary table for comparative analysis.
+     * Renamed to start with 'z_' to ensure it runs last due to @FixMethodOrder.
      */
     @Test
-    fun generateComparisonTableReport() {
+    fun z_GenerateComparisonTableReport() {
         val allResults = mutableListOf<PerformanceResult>()
 
         // 1. Collect all results (runs 13 models * 4 configurations = 52 tests)
@@ -308,7 +323,7 @@ class ObjectDetectionInstrumentationTest {
         }
         report.append("========================================================================================================================\n")
 
-        writeEvaluationReport(appContext, report.toString(), "ComparisonTableReport")
+        writeEvaluationReport(report.toString(), "ComparisonTableReport")
         assertTrue("Comparison table report generated successfully.", true)
     }
 
