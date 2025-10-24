@@ -79,21 +79,21 @@ enum class Models(
     ),
 
     // EE Pruned Backbone + Neck Variants (New) -----------------------------------------------------
-    EE_NECK_PRUNED_FP16(
-        "EE Neck Pruned FP16",
-        "EE_backbone_neck_manual_pruned_float16.tflite",
-        "18Obstacles_labels.txt"
-    ),
-    EE_NECK_PRUNED_FP32(
-        "EE Neck Pruned FP32",
-        "EE_backbone_neck_manual_pruned_float32.tflite",
-        "18Obstacles_labels.txt"
-    ),
-    EE_NECK_PRUNED_INT8(
-        "EE Neck Pruned INT8",
-        "EE_backbone_neck_manual_pruned_int8.tflite",
-        "18Obstacles_labels.txt"
-    ),
+//    EE_NECK_PRUNED_FP16(
+//        "EE Neck Pruned FP16",
+//        "EE_backbone_neck_manual_pruned_float16.tflite",
+//        "18Obstacles_labels.txt"
+//    ),
+//    EE_NECK_PRUNED_FP32(
+//        "EE Neck Pruned FP32",
+//        "EE_backbone_neck_manual_pruned_float32.tflite",
+//        "18Obstacles_labels.txt"
+//    ),
+//    EE_NECK_PRUNED_INT8(
+//        "EE Neck Pruned INT8",
+//        "EE_backbone_neck_manual_pruned_int8.tflite",
+//        "18Obstacles_labels.txt"
+//    ),
 
     // EE_Backbone Only Variants (Base) -------------------------------------------------------------
     EE_BACKBONE_ONLY_FP16(
@@ -112,37 +112,37 @@ enum class Models(
         "18Obstacles_labels.txt"
     ),
 
-    // EE Pruned Backbone Only Variants (New) --------------------------------------------------------
+    // EE Pruned Backbone Variants  --------------------------------------------------------
     EE_ONLY_PRUNED_FP16(
-        "EE Only Pruned FP16",
-        "EE_backboneonly_manual_pruned_float16.tflite",
+        "EE Pruned FP16",
+        "EE_backbone_neck_pruned_float16.tflite",
         "18Obstacles_labels.txt"
     ),
     EE_ONLY_PRUNED_FP32(
-        "EE Only Pruned FP32",
-        "EE_backboneonly_manual_pruned_float32.tflite",
+        "EE Pruned FP32",
+        "EE_backbone_neck_pruned_float32.tflite",
         "18Obstacles_labels.txt"
     ),
     EE_ONLY_PRUNED_INT8(
-        "EE Only Pruned INT8",
-        "EE_backboneonly_manual_pruned_int8.tflite",
+        "EE Pruned INT8",
+        "EE_backbone_neck_pruned_int8.tflite",
         "18Obstacles_labels.txt"
     ),
 
     // Customized Pruned Variants (New) --------------------------------------------------------------
     CUSTOMIZED_PRUNED_FP16(
         "Customized Pruned FP16",
-        "customized_without_EE_manual_pruned_float16.tflite",
+        "customized_without_EE_pruned_float16.tflite",
         "18Obstacles_labels.txt"
     ),
     CUSTOMIZED_PRUNED_FP32(
         "Customized Pruned FP32",
-        "customized_without_EE_manual_pruned_float32.tflite",
+        "customized_without_EE_pruned_float32.tflite",
         "18Obstacles_labels.txt"
     ),
     CUSTOMIZED_PRUNED_INT8(
         "Customized Pruned INT8",
-        "customized_without_EE_manual_pruned_int8.tflite",
+        "customized_without_EE_pruned_int8.tflite",
         "18Obstacles_labels.txt"
     ),
 
