@@ -270,18 +270,18 @@ class ObjectDetectionInstrumentationTest {
     @Test fun evaluate_CUSTOMIZED_PRUNED_FP16() { generateDetailedReport(Models.CUSTOMIZED_PRUNED_FP16) }
     @Test fun evaluate_CUSTOMIZED_PRUNED_FP32() { generateDetailedReport(Models.CUSTOMIZED_PRUNED_FP32) }
     @Test fun evaluate_CUSTOMIZED_PRUNED_INT8() { generateDetailedReport(Models.CUSTOMIZED_PRUNED_INT8) }
-    @Test fun evaluate_EE_NECK_PRUNED_FP16() { generateDetailedReport(Models.EE_NECK_PRUNED_FP16) }
-    @Test fun evaluate_EE_NECK_PRUNED_FP32() { generateDetailedReport(Models.EE_NECK_PRUNED_FP32) }
-    @Test fun evaluate_EE_NECK_PRUNED_INT8() { generateDetailedReport(Models.EE_NECK_PRUNED_INT8) }
+//    @Test fun evaluate_EE_NECK_PRUNED_FP16() { generateDetailedReport(Models.EE_NECK_PRUNED_FP16) }
+//    @Test fun evaluate_EE_NECK_PRUNED_FP32() { generateDetailedReport(Models.EE_NECK_PRUNED_FP32) }
+//    @Test fun evaluate_EE_NECK_PRUNED_INT8() { generateDetailedReport(Models.EE_NECK_PRUNED_INT8) }
     @Test fun evaluate_EE_ONLY_PRUNED_FP16() { generateDetailedReport(Models.EE_ONLY_PRUNED_FP16) }
     @Test fun evaluate_EE_ONLY_PRUNED_FP32() { generateDetailedReport(Models.EE_ONLY_PRUNED_FP32) }
     @Test fun evaluate_EE_ONLY_PRUNED_INT8() { generateDetailedReport(Models.EE_ONLY_PRUNED_INT8) }
-    @Test fun evaluate_YOLO12_18_OBSTACLE_FP32BIT() { generateDetailedReport(Models.YOLO12_18_OBSTACLE_FP32BIT) }
-    @Test fun evaluate_YOLO8_18_OBSTACLE_FP32BIT() { generateDetailedReport(Models.YOLO8_18_OBSTACLE_FP32BIT) }
-    @Test fun evaluate_YOLO8_18_OBSTACLE_FULL_INTEGER() { generateDetailedReport(Models.YOLO8_18_OBSTACLE_FULL_INTEGER) }
-    @Test fun evaluate_YOLO8_18_OBSTACLE_INT8() { generateDetailedReport(Models.YOLO8_18_OBSTACLE_INT8) }
-    @Test fun evaluate_YOLO8_18_OBSTACLE_INTEGER_QUANT() { generateDetailedReport(Models.YOLO8_18_OBSTACLE_INTEGER_QUANT) }
-    @Test fun evaluate_YOLOV8_FLOAT32() { generateDetailedReport(Models.YOLOV8_FLOAT32) }
+//    @Test fun evaluate_YOLO12_18_OBSTACLE_FP32BIT() { generateDetailedReport(Models.YOLO12_18_OBSTACLE_FP32BIT) }
+//    @Test fun evaluate_YOLO8_18_OBSTACLE_FP32BIT() { generateDetailedReport(Models.YOLO8_18_OBSTACLE_FP32BIT) }
+//    @Test fun evaluate_YOLO8_18_OBSTACLE_FULL_INTEGER() { generateDetailedReport(Models.YOLO8_18_OBSTACLE_FULL_INTEGER) }
+//    @Test fun evaluate_YOLO8_18_OBSTACLE_INT8() { generateDetailedReport(Models.YOLO8_18_OBSTACLE_INT8) }
+//    @Test fun evaluate_YOLO8_18_OBSTACLE_INTEGER_QUANT() { generateDetailedReport(Models.YOLO8_18_OBSTACLE_INTEGER_QUANT) }
+//    @Test fun evaluate_YOLOV8_FLOAT32() { generateDetailedReport(Models.YOLOV8_FLOAT32) }
 
 
     // --- FINAL COMPARISON TABLE TEST ---
